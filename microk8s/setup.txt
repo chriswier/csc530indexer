@@ -1,0 +1,46 @@
+Microk8s install with Solr
+--------------------------------
+
+Based off of:
+1. https://ubuntu.com/tutorials/install-a-local-kubernetes-with-microk8s#2-deploying-microk8s
+2. https://lucidworks.com/post/running-solr-on-kubernetes-part-1/2. https://lucidworks.com/post/running-solr-on-kubernetes-part-1/
+
+1.  Setup snap/microk8s
+
+sudo su
+apt install snap
+snap install microk8s --classic
+microk8s enable dns dashboard storage ingress helm3
+snap install helm --classic
+
+# Verify everything is running:
+# microk8s kubectl get all --all-namespaces
+
+Edit /root/.bash_aliases
+-------------
+alias kubectl="microk8s kubectl"
+
+# Fixup microk8s config for Helm
+# https://worklifenotes.com/2020/01/22/how-to-make-microk8s-work-with-helm/
+mkdir /etc/microk8s
+microk8s.config > /etc/microk8s/microk8s.conf
+chmod 600 /etc/microk8s/microk8s.conf
+export KUBECONFIG=/etc/microk8s/microk8s.conf
+
+vi /root/.bashrc
+-------------- (append)
+export KUBECONFIG=/etc/microk8s/microk8s.conf
+
+2.  Install solr via Helm3
+helm repo add stable https://kubernetes-charts.storage.googleapis.com
+helm repo add incubator https://kubernetes-charts-incubator.storage.googleapis.com
+helm repo update
+helm search repo solr
+
+helm install incubator/solr --generate-name
+
+# Verify with:  microk8s kubectl get pods
+# Log files of individual pods:  kubectl describe pod <name>
+
+3.  Add ingress
+
