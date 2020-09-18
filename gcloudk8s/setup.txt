@@ -1,0 +1,84 @@
+Based off https://lucidworks.com/post/running-solr-on-kubernetes-part-1/
+
+1.  Setup gcloud libraries on Ubuntu 20.04
+( from https://cloud.google.com/sdk/docs/quickstart#deb )
+
+echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
+sudo apt-get install apt-transport-https ca-certificates gnupg
+curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
+sudo apt-get update && sudo apt-get install google-cloud-sdk
+
+2.  Init and connect to Google cloud
+a.  Webbrowser - Create a new Google cloud project (console.cloud.google.com)
+ --> csc530-fa20-k8s
+
+b.  gcloud init --console-only
+(Complete login/authorization in web browser/console)
+
+3.  Add kubectl / Helm3 to CLI
+snap install kubectl --classic
+snap install helm --classic
+
+4.  Create Gcloud kubernetes cluster
+a.  Webbrowser - console.cloud.google.com
+  -- Create Kubernetes Standard cluster
+   - Name:  solr-cluster-1
+   - Type: zonal
+   - Master version: Release Channel - default
+   - Num nodes: 3
+   - vCPUs: 4
+   - Auto-upgrade:  ON -> Enable Auto-scaling (min 0, max 5)
+   - Node type:  N1 -> n1-standard-4
+
+5. Connect gcloud SDK / Enable admin account
+gcloud config set compute/zone <zone>
+gcloud config set core/account <emailaddress>
+gcloud projects list
+gcloud config set project <projectid>
+gcloud container clusters get-credentials solr-cluster-1
+Verify: kubectl config current-context
+kubectl create clusterrolebinding cluster-admin-binding --clusterrole=cluster-admin --user=$(gcloud config get-value core/account)
+
+6.  Install Helm3
+kubectl create serviceaccount --namespace kube-system tiller
+kubectl create clusterrolebinding tiller-cluster-rule 
+   --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
+helm version
+helm repo add stable https://kubernetes-charts.storage.googleapis.com
+
+7.  Grab solr chart
+helm search repo solr
+
+>>>
+incubator/solr  1.5.2           8.4.0           A helm chart to install Apache Solr:
+--
+
+helm repo update
+helm install incubator/solr --generate-name
+
+(Watch it deploy using 'kubectl get pods'; make sure to figure out port listing)
+
+8.  Create Ingress
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm install solr ingress-nginx/ingress-nginx
+
+Check:  kubectl --namespace default get services -o wide -w solr-ingress-nginx-controller
+
+kubectl get service   (Note the solr-#####-svc service name and port)
+
+Create basic-ingress.yaml:
+
+-----
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:a
+  annotations:
+    kubernetes.io/ingress.class: nginx
+  name: basic-ingress-solr
+spec:
+  backend:
+    serviceName: <servicename>
+    servicePort: <serviceport>
+-----
+
+kubectl apply -f basic-ingress.yaml

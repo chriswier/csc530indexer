@@ -1,0 +1,10 @@
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: nginx
+  name: basic-ingress
+spec:
+  backend:
+    serviceName: solr-1600436467-svc
+    servicePort: 8983
