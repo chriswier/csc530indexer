@@ -1,0 +1,8 @@
+# How to create the Python3 virtualenv needed
+
+apt install python3-venv python3-virtualenv
+virtualenv venv-indexer
+source venv-index/bin/activate
+pip install --upgrade setuptools
+pip install --upgrade pip
+pip install --upgrade requests
