@@ -1,4 +1,3 @@
-#!/usr/bin/python3
 # test.py
 # Author: Chris Wieringa chris@wieringafamily.com
 # Purpose:  test functions
@@ -14,16 +13,16 @@ import os
 
 DEBUG = 1
 
-# # # test encodeurl/decodeurl
+# # # # test encodeurl/decodeurl
 test = 'https://en.wikipedia.org/wiki/United_States'
 testenc = encodeurl(test)
 testdec = decodeurl(testenc)
 
 if(DEBUG):
-	print("**** encodeurl/decodeurl ****")
-	print("URL:",test)
-	print("URL Encoded:",testenc)
-	print("URL Decoded:",testdec)
+    print("**** encodeurl/decodeurl ****")
+    print("URL:",test)
+    print("URL Encoded:",testenc)
+    print("URL Decoded:",testdec)
 assert test == testdec
 
 
@@ -34,10 +33,10 @@ testenc = encodeurl(test)
 testencfilename = getencfilename(testenc)
 
 if(DEBUG):
-	print("**** geturlfilename/getencfilename ****")
-	print("URL:",test)
-	print("URL filename:",testurlfilename)
-	print("Enc filename:",testencfilename)
+    print("**** geturlfilename/getencfilename ****")
+    print("URL:",test)
+    print("URL filename:",testurlfilename)
+    print("Enc filename:",testencfilename)
 assert testurlfilename == testencfilename
 
 # # # test getURLContentType/getURL
@@ -46,9 +45,9 @@ testurlfilename = geturlfilename(test,'./','.htm')
 
 testhead = getURLContentType(test)
 if(DEBUG):
-	print("**** getURLContentType ****")
-	print("URL:",test)
-	print("Content-Type:",testhead)
+    print("**** getURLContentType ****")
+    print("URL:",test)
+    print("Content-Type:",testhead)
 assert re.search("text\/html",testhead)
 
 testfile = str(int(time.time())) + ".html"
@@ -57,10 +56,18 @@ assert result
 assert os.path.exists(testfile)
 assert os.stat(testfile).st_size > 1000
 if(DEBUG):
-	print("**** getURL ****")
-	print("URL:",test)
-	print("Test file:",testfile)
-	print("Test file size:",os.stat(testfile).st_size)
+    print("**** getURL ****")
+    print("URL:",test)
+    print("Test file:",testfile)
+    print("Test file size:",os.stat(testfile).st_size)
 os.remove(testfile)
 
+# # # test getLinks
+testfile = 'United_states'
+mylinks = getLinks(testfile)
+assert len(mylinks) > 2000
+if(DEBUG):
+    print("**** getLinks ****")
+    print("Test file:",testfile)
+    print("Num links:",len(mylinks))
 
