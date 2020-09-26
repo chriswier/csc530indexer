@@ -4,9 +4,7 @@
 # Date: 2020-09-25
 
 from shared import *
-import re
-import time
-import os
+import re, time, os
 
 # # # # # # #
 # DEBUG
@@ -71,3 +69,39 @@ if(DEBUG):
     print("Test file:",testfile)
     print("Num links:",len(mylinks))
 
+## test database functions
+# variables
+dbfile = 'test.db'
+dbtable = 'testpages'
+testurl1 = 'http://slashdot.org'
+testurl2 = 'http://reddit.com'
+testurl3 = 'http://npr.org'
+testurl4 = 'http://cnn.com'
+testurl5 = 'http://umflint.edu'
+
+# make a clean db, remove old one if exists
+if(os.path.exists(dbfile)):
+    os.remove(dbfile)
+
+if(DEBUG):
+    print("**** Testing database routines ****")
+    
+assert createRecord(encodeurl(testurl1),1,0,dbfile,dbtable)
+assert getNumRecordsByRank(1,dbfile,dbtable) == 1
+assert createRecord(encodeurl(testurl2),1,1,dbfile,dbtable)
+assert getNumRecordsByRank(1,dbfile,dbtable) == 2
+assert createRecord(encodeurl(testurl3),2,0,dbfile,dbtable)
+assert getNumRecordsByRank(2,dbfile,dbtable) == 1
+assert getNumUnprocessedRecordsByRank(1,dbfile,dbtable) == 1
+assert getNumUnprocessedRecordsByRank(2,dbfile,dbtable) == 1
+assert updateRecordParsed(encodeurl(testurl3),1,dbfile,dbtable)
+assert getNumUnprocessedRecordsByRank(2,dbfile,dbtable) == 0
+assert createRecord(encodeurl(testurl4),1,0,dbfile,dbtable)
+assert createRecord(encodeurl(testurl5),1,0,dbfile,dbtable)
+records = getUnprocessedRecordsByRank(1,dbfile,dbtable)
+assert len(records) == 3
+
+if(DEBUG):
+    print("  --> Unprocessed rows in rank 1")
+    for row in records:
+        print("     " + row + " - " + decodeurl(row))

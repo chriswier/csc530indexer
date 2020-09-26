@@ -1,5 +1,5 @@
-# don't store the crawledpages
-crawledpages/
+# don't store the data directory
+data/
 
 # don't store the venv
 venv-indexer/
