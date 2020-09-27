@@ -14,6 +14,7 @@ pagedir = datadir + "pages/"
 defaultextension = '.html'
 dbfilename = datadir + "indexer.db"
 dbtable = 'pages'
+useragent = 'Mozilla/5.0 (csc530-indeexer-edu-bot 0.0.1)'
 
 ### # # # # #
 # SUBROUTINES
@@ -42,7 +43,7 @@ def getencfilename(encname,dir=pagedir,ext=defaultextension):
 def getURLContentType(url):
     
     # use wget
-    wgetcmd = 'wget --server-response --spider %s -q -T 10 --read-timeout=15 -t 1 --no-dns-cache -U csc530-umflint-edu-bot/0.0.1 --no-cache' % (url)
+    wgetcmd = 'wget --server-response --spider %s -q -T 10 --read-timeout=15 -t 1 --no-dns-cache -U %s --no-cache' % (url,useragent)
     wgetcmd = wgetcmd.split()
     #print(wgetcmd)
     result = subprocess.run(wgetcmd, capture_output=True, text=True)
@@ -73,7 +74,7 @@ def getURL(url,filename):
        return False
     
     # use wget
-    wgetcmd = 'wget "%s" -O "%s" -q -T 10 --read-timeout=15 -t 2 -U "csc530-umflint-edu-bot/0.0.1" --no-dns-cache --no-cache --convert-links' % (url,filename)
+    wgetcmd = 'wget "%s" -O "%s" -q -T 10 --read-timeout=15 -t 2 -U "%s" --no-dns-cache --no-cache --convert-links' % (url,filename,useragent)
 
     stream = os.popen(wgetcmd)
     output = stream.read()
@@ -365,6 +366,26 @@ def getUnindexedRecordsByRank(myrank,dbfile=dbfilename,mytable=dbtable):
     db = None
     return records
 
+def getRecordsByRank(myrank,dbfile=dbfilename,mytable=dbtable):
+    # check the db filepath
+    if(not(os.path.exists(dbfile))):
+        print("getUnprocessedRecordsByRank - file not found " + dbfile)
+        return []
+
+    # make connection
+    db = dataset.connect('sqlite:///' + dbfile)
+    table = db[mytable]
+
+    # query it
+    records = []
+    for row in table.find(rank=myrank):
+        records.append(str(row['site']))
+
+    # return it out
+    db = None
+    return records
+
+
 def checkSiteExists(mysite,dbfile=dbfilename,mytable=dbtable):
     # check the db filepath
     if(not(os.path.exists(dbfile))):
@@ -394,8 +415,13 @@ def checkSiteExists(mysite,dbfile=dbfilename,mytable=dbtable):
 def processURL(url,rank,dbfile=dbfilename,mytable=dbtable,mypagedir=pagedir):
     
     # first, get the encoded name
-    encname = encodeurl(url)
-    filename = geturlfilename(url,mypagedir)
+    try:
+        encname = encodeurl(url)
+        filename = geturlfilename(url,mypagedir)
+
+    # if I get a failure here, just bomb out on this one
+    except:
+        return False
     
     # check to see if this one exists already
     exists = checkSiteExists(encname,dbfile,mytable)
