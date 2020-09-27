@@ -35,7 +35,7 @@ def main():
     # check to make sure the user really wants to override the database
     if(os.path.exists(dbfilename) and os.path.isfile(dbfilename) and
        os.stat(dbfilename).st_size > 0):
-        overwrite = input("Database " + dbfilename + " exists.  Confirm overwrite:  y/N")
+        overwrite = input("Database " + dbfilename + " exists.  Confirm overwrite? (y/N) : ")
         if(overwrite in ("y","Y","yes","YES")):
             os.remove(dbfilename)
         else:

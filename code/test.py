@@ -4,7 +4,7 @@
 # Date: 2020-09-25
 
 from shared import *
-import re, time, os
+import re, time, os, dataset
 
 # # # # # # #
 # DEBUG
@@ -68,6 +68,8 @@ if(DEBUG):
     print("**** getLinks ****")
     print("Test file:",testfile)
     print("Num links:",len(mylinks))
+    for l in mylinks:
+        print(l)
 
 ## test database functions
 # variables
@@ -85,23 +87,39 @@ if(os.path.exists(dbfile)):
 
 if(DEBUG):
     print("**** Testing database routines ****")
-    
-assert createRecord(encodeurl(testurl1),1,0,dbfile,dbtable)
-assert getNumRecordsByRank(1,dbfile,dbtable) == 1
-assert createRecord(encodeurl(testurl2),1,1,dbfile,dbtable)
-assert getNumRecordsByRank(1,dbfile,dbtable) == 2
-assert createRecord(encodeurl(testurl3),2,0,dbfile,dbtable)
-assert getNumRecordsByRank(2,dbfile,dbtable) == 1
-assert getNumUnprocessedRecordsByRank(1,dbfile,dbtable) == 1
-assert getNumUnprocessedRecordsByRank(2,dbfile,dbtable) == 1
-assert updateRecordParsed(encodeurl(testurl3),1,dbfile,dbtable)
-assert getNumUnprocessedRecordsByRank(2,dbfile,dbtable) == 0
-assert createRecord(encodeurl(testurl4),1,0,dbfile,dbtable)
-assert createRecord(encodeurl(testurl5),1,0,dbfile,dbtable)
-records = getUnprocessedRecordsByRank(1,dbfile,dbtable)
-assert len(records) == 3
 
-if(DEBUG):
-    print("  --> Unprocessed rows in rank 1")
-    for row in records:
-        print("     " + row + " - " + decodeurl(row))
+try:
+    assert createRecord(encodeurl(testurl1),1,0,0,dbfile,dbtable)
+    assert getNumRecordsByRank(1,dbfile,dbtable) == 1
+    assert checkSiteExists(encodeurl(testurl1),dbfile,dbtable)
+    assert createRecord(encodeurl(testurl2),1,1,1,dbfile,dbtable)
+    assert getNumRecordsByRank(1,dbfile,dbtable) == 2
+    assert checkSiteExists(encodeurl(testurl2),dbfile,dbtable)
+    assert createRecord(encodeurl(testurl3),2,0,0,dbfile,dbtable)
+    assert getNumRecordsByRank(2,dbfile,dbtable) == 1
+    assert getNumUnprocessedRecordsByRank(1,dbfile,dbtable) == 1
+    assert getNumUnprocessedRecordsByRank(2,dbfile,dbtable) == 1
+    assert getNumUnindexedRecordsByRank(1,dbfile,dbtable) == 1
+    assert getNumUnindexedRecordsByRank(2,dbfile,dbtable) == 1
+    assert updateRecordParsed(encodeurl(testurl3),1,dbfile,dbtable)
+    assert updateRecordIndexed(encodeurl(testurl3),1,dbfile,dbtable)
+    assert getNumUnprocessedRecordsByRank(2,dbfile,dbtable) == 0
+    assert getNumUnindexedRecordsByRank(2,dbfile,dbtable) == 0
+    assert createRecord(encodeurl(testurl4),1,0,0,dbfile,dbtable)
+    assert createRecord(encodeurl(testurl5),1,0,0,dbfile,dbtable)
+    records = getUnprocessedRecordsByRank(1,dbfile,dbtable)
+    assert len(records) == 3
+    
+    if(DEBUG):
+        print("  --> Unprocessed rows in rank 1")
+        for row in records:
+            print("     " + row + " - " + decodeurl(row))
+            
+except AssertionError as ae:
+    print("DB Error:",ae)
+    db = dataset.connect('sqlite:///' + dbfile)
+    table = db[dbtable]
+
+    for row in table.all():
+        print(row)
+

@@ -16,6 +16,8 @@ print("---------------------------")
 
 for i in range(0,5):
     rank = i+1
-    print("Rank %d - Total: %06d (Unprocessed: %06d)" % (rank,getNumRecordsByRank(rank),getNumUnprocessedRecordsByRank(rank)))
+    print("Rank %d - Total: %06d (Unprocessed: %06d, Unindexed: %06d)" %
+          (rank,getNumRecordsByRank(rank),getNumUnprocessedRecordsByRank(rank),
+           getNumUnindexedRecordsByRank(rank)))
     #print("Rank " + str(rank) + " - Total:",str(getNumRecordsByRank(rank)),"(Unprocessed:",str(getNumUnprocessedRecordsByRank(rank)) + ")")
 
