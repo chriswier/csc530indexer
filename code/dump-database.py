@@ -1,7 +1,7 @@
 # dump-database.py
 
 import dataset
-
+from shared import *
 
 ### # # # # #
 # Global variables
@@ -11,11 +11,13 @@ defaultextension = '.html'
 dbfilename = datadir + "indexer.db"
 dbtable = 'pages'
 
-# make connection
-db = dataset.connect('sqlite:///' + dbfilename)
+# get db lock and db object
+lockfile = getDBLock(dbfilename)
+mydb = getDB(dbfilename)
+
 
 # make a table
-table = db[dbtable]
+table = mydb[dbtable]
 
 # iterate them
 print("Opening:",dbfilename,"Table:",dbtable)
@@ -23,3 +25,7 @@ print("---------------------------")
 print("All rows:")
 for row in table.all():
     print(row)
+    
+# close db lock and db object
+mydb = None
+releaseDBLock(lockfile)

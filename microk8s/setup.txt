@@ -10,7 +10,7 @@ Based off of:
 sudo su
 apt install snap
 snap install microk8s --classic
-microk8s enable dns dashboard storage ingress helm3
+microk8s enable dns dashboard storage helm3 ambassador
 snap install helm --classic
 
 # Verify everything is running:
@@ -37,7 +37,7 @@ helm repo add incubator https://kubernetes-charts-incubator.storage.googleapis.c
 helm repo update
 helm search repo solr
 
-helm install incubator/solr --generate-name
+helm install incubator/solr --generate-name --set javaMem="-Xms2g -Xmx2g",livenessProbe.initialDelaySeconds=420,exporter.readinessProbe.periodSeconds=30,volumeClaimTemplates.storageSize=50Gi
 
 # Verify with:  microk8s kubectl get pods
 # Log files of individual pods:  kubectl describe pod <name>

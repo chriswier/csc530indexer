@@ -4,16 +4,22 @@
 # Date: 2020-09-25
 
 import base64, requests, os, re, dataset, pathlib, sys, subprocess, mimetypes
+import urllib.robotparser
 from bs4 import BeautifulSoup
 from langdetect import detect
+from filelock import Timeout, FileLock
+from urllib.parse import urlparse
+
 
 ### # # # # #
 # Global variables
 datadir = "../data/"
 pagedir = datadir + "pages/"
+robotsdir = datadir + "robots/"
 defaultextension = '.html'
 dbfilename = datadir + "indexer.db"
 dbtable = 'pages'
+robotstable = 'robots'
 useragent = 'Mozilla/5.0 (csc530-indeexer-edu-bot 0.0.1)'
 
 ### # # # # #
@@ -39,6 +45,21 @@ def getencfilename(encname,dir=pagedir,ext=defaultextension):
     filepath = dir + str(encname) + ext
     return filepath
 
+# convert filename back to URL
+def decodefilename(filename):
+    return decodeurl(pathlib.Path(filename).stem)
+
+def fixupURL(url):
+    # check to see if the URL has a # in it
+    m = re.search('^(.+)\#',url)
+    if m:
+        #print("type:",m.group(1))
+        url = m.group(1)
+    
+    # return out
+    return url
+    
+    
 # HTTP download functions
 def getURLContentType(url):
     
@@ -125,7 +146,75 @@ def getURL(url,filename):
     # bad download = fail
     else:
         return False
+
+
+# robots.txt processing
+def getRobotsURL(url):
+    netloc = urlparse(url).netloc
+    scheme = urlparse(url).scheme
+    return scheme + '://' + netloc + '/robots.txt'
+
+# # convert url to a filename either using encname or the full URL
+# def getRobotsURLfilename(url,dir=pagedir,ext='.txt'):
+#     encfilename = encodeurl(url)
+#     filepath = dir + str(encfilename) + ext
+#     return filepath
+
+def downloadRobotsURL(robotsUrl,filename,db):
+    # do the download
+    downloadResult = getURL(robotsUrl,filename)
+    #print("downloadRobotsURL: ",robotsUrl,downloadResult)
     
+    # make sure it is in the database, whether it exists or not
+    # add to the database
+    table = db['robots']
+    # make the insert
+    id = table.insert(dict(site=robotsUrl,file=filename,exists=downloadResult))
+    #print("createRecord:",id)
+    db.commit()
+    
+    if(id == None):
+        print("downloadRobotsURL insert Error!")
+        #os.remove(filename)
+        return False
+    else:
+        return True
+    
+def getRobotsDatabaseEntry(robotsUrl,db):
+    # check to see if it is in the database
+    table = db['robots']
+    return table.find_one(site=robotsUrl)
+
+def checkUrlAllowedRobots(url,db,dbEntry,useragent='*'):
+    ''' assumes url is a page url, db is the pre-made db object, and dbEntry is the robots table dbentry for the page, gotten by getRobotsDatabaseEntry '''
+    
+    # check to see if it is in the database
+    table = db['robots']
+    robotsfilename = dbEntry['file']
+    robotsexists = dbEntry['exists']
+    robotssite = dbEntry['site']
+    
+    # if it is there, use the pre-existing robots.txt
+    if(robotsexists and os.path.exists(robotsfilename) and os.path.isfile(robotsfilename)):
+        with open(robotsfilename) as f:
+            lines = f.read().splitlines()
+        
+        #print(lines)
+        # make a urllib parser
+        rp = urllib.robotparser.RobotFileParser()
+        rp.set_url(robotssite)
+        rp.parse(lines)
+        #print(rp)
+        #print(rp.site_maps())
+        # check the url
+        return rp.can_fetch(useragent,url)
+    
+    # if the robots.txt file doesn't exists, assume yes
+    elif(robotsexists == False):
+        return True
+    
+    else:
+        return False    
 
 # html page processing
 def getLinks(filename):
@@ -203,43 +292,60 @@ def getLinks(filename):
 # DB subroutines
 # # # # # # # # #
 
-# createRecord
-def createRecord(mysite,myrank,myparsed,myindexed,dbfile=dbfilename,mytable=dbtable):
-    # check the db directory; file will be autocreated if it doesn't exist
+# db file locking
+def getDBLock(dbfile=dbfilename):
+    lock = FileLock("%s.lock" % dbfile,)
+    try:
+        with lock.acquire(timeout=10):
+            return lock
+    except Timeout:
+        print("getDBLock - failed with timeout")
+        return None
+
+def releaseDBLock(lock):
+    lock.release()
+
+def getDB(dbfile=dbfilename):
+     # check the db directory; file will be autocreated if it doesn't exist
     basedir = os.path.dirname(dbfile)
     if(not(os.path.isdir(basedir))):
         pathlib.Path(basedir).mkdir(parents=True, exist_ok=True)
         
+    # make connection
+    db = dataset.connect('sqlite:///' + dbfile)
+    if(db):
+        return db
+    else:
+        print("getDB: failed to create db object")
+
+
+# createRecord
+def createRecord(mysite,myrank,myparsed,myindexed,db,mytable=dbtable):
+           
     #print("DEBUG",mysite,myrank,myparsed,dbfile,mytable)
     
     # make connection
-    db = dataset.connect('sqlite:///' + dbfile)
     table = db[mytable]
     
     # make the insert
     id = table.insert(dict(site=mysite,rank=myrank,parsed=myparsed,indexed=myindexed))
     #print("createRecord:",id)
     db.commit()
-    db = None
+    
     if(id == None):
         print("createRecord Error!")
         return False
     else:
         return True
 
-def updateRecordParsed(mysite,myparsed,dbfile=dbfilename,mytable=dbtable):
-    # check the db filepath
-    if(not(os.path.exists(dbfile))):
-        return False
+def updateRecordParsed(mysite,myparsed,db,mytable=dbtable):
     
     # make connection
-    db = dataset.connect('sqlite:///' + dbfile)
     table = db[mytable]
     
     # make the update
     id = table.update(dict(site=mysite,parsed=myparsed),['site'])
     db.commit()
-    db = None
     
     if(id == None):
         print("updateRecordParsed error!")
@@ -248,19 +354,14 @@ def updateRecordParsed(mysite,myparsed,dbfile=dbfilename,mytable=dbtable):
         return True
 
 
-def updateRecordIndexed(mysite,myindexed,dbfile=dbfilename,mytable=dbtable):
-    # check the db filepath
-    if(not(os.path.exists(dbfile))):
-        return False
+def updateRecordIndexed(mysite,myindexed,db,mytable=dbtable):
     
     # make connection
-    db = dataset.connect('sqlite:///' + dbfile)
     table = db[mytable]
     
     # make the update
     id = table.update(dict(site=mysite,indexed=myindexed),['site'])
     db.commit()
-    db = None
     
     if(id == None):
         print("updateRecordIndexed error!")
@@ -268,14 +369,9 @@ def updateRecordIndexed(mysite,myindexed,dbfile=dbfilename,mytable=dbtable):
     else:
         return True
 
-def getNumRecordsByRank(myrank,dbfile=dbfilename,mytable=dbtable):
-    # check the db filepath
-    if(not(os.path.exists(dbfile))):
-        print("getNumRecordsByRank - file not found " + dbfile)
-        return 0
+def getNumRecordsByRank(myrank,db,mytable=dbtable):
     
     # make connection
-    db = dataset.connect('sqlite:///' + dbfile)
     table = db[mytable]
     
     # use a sqlalchemy query here
@@ -285,17 +381,10 @@ def getNumRecordsByRank(myrank,dbfile=dbfilename,mytable=dbtable):
         count = row['c']
     
     # return it out
-    db = None
     return count
 
-def getNumUnprocessedRecordsByRank(myrank,dbfile=dbfilename,mytable=dbtable):
-    # check the db filepath
-    if(not(os.path.exists(dbfile))):
-        print("getNumUnprocessedRecordsByRank - file not found " + dbfile)
-        return 0
-    
+def getNumUnprocessedRecordsByRank(myrank,db,mytable=dbtable):
     # make connection
-    db = dataset.connect('sqlite:///' + dbfile)
     table = db[mytable]
     
     # use a sqlalchemy query here
@@ -305,17 +394,10 @@ def getNumUnprocessedRecordsByRank(myrank,dbfile=dbfilename,mytable=dbtable):
         count = row['c']
     
     # return it out
-    db = None
     return count
 
-def getNumUnindexedRecordsByRank(myrank,dbfile=dbfilename,mytable=dbtable):
-    # check the db filepath
-    if(not(os.path.exists(dbfile))):
-        print("getNumUnindexedRecordsByRank - file not found " + dbfile)
-        return 0
-    
+def getNumUnindexedRecordsByRank(myrank,db,mytable=dbtable):
     # make connection
-    db = dataset.connect('sqlite:///' + dbfile)
     table = db[mytable]
     
     # use a sqlalchemy query here
@@ -325,17 +407,10 @@ def getNumUnindexedRecordsByRank(myrank,dbfile=dbfilename,mytable=dbtable):
         count = row['c']
     
     # return it out
-    db = None
     return count    
 
-def getUnprocessedRecordsByRank(myrank,dbfile=dbfilename,mytable=dbtable):
-    # check the db filepath
-    if(not(os.path.exists(dbfile))):
-        print("getUnprocessedRecordsByRank - file not found " + dbfile)
-        return []
-    
+def getUnprocessedRecordsByRank(myrank,db,mytable=dbtable):
     # make connection
-    db = dataset.connect('sqlite:///' + dbfile)
     table = db[mytable]
     
     # query it
@@ -344,17 +419,10 @@ def getUnprocessedRecordsByRank(myrank,dbfile=dbfilename,mytable=dbtable):
         records.append(str(row['site']))
     
     # return it out
-    db = None
     return records
 
-def getUnindexedRecordsByRank(myrank,dbfile=dbfilename,mytable=dbtable):
-    # check the db filepath
-    if(not(os.path.exists(dbfile))):
-        print("getUnprocessedRecordsByRank - file not found " + dbfile)
-        return []
-    
+def getUnindexedRecordsByRank(myrank,db,mytable=dbtable):
     # make connection
-    db = dataset.connect('sqlite:///' + dbfile)
     table = db[mytable]
     
     # query it
@@ -363,17 +431,10 @@ def getUnindexedRecordsByRank(myrank,dbfile=dbfilename,mytable=dbtable):
         records.append(str(row['site']))
     
     # return it out
-    db = None
     return records
 
-def getRecordsByRank(myrank,dbfile=dbfilename,mytable=dbtable):
-    # check the db filepath
-    if(not(os.path.exists(dbfile))):
-        print("getUnprocessedRecordsByRank - file not found " + dbfile)
-        return []
-
+def getRecordsByRank(myrank,db,mytable=dbtable):
     # make connection
-    db = dataset.connect('sqlite:///' + dbfile)
     table = db[mytable]
 
     # query it
@@ -382,18 +443,11 @@ def getRecordsByRank(myrank,dbfile=dbfilename,mytable=dbtable):
         records.append(str(row['site']))
 
     # return it out
-    db = None
     return records
 
 
-def checkSiteExists(mysite,dbfile=dbfilename,mytable=dbtable):
-    # check the db filepath
-    if(not(os.path.exists(dbfile))):
-        print("checkSiteExists - file not found " + dbfile)
-        return False
-    
+def checkSiteExists(mysite,db,mytable=dbtable):
     # make connection
-    db = dataset.connect('sqlite:///' + dbfile)
     table = db[mytable]
     
     # use a sqlalchemy query here
@@ -403,7 +457,6 @@ def checkSiteExists(mysite,dbfile=dbfilename,mytable=dbtable):
         count = row['c']
     
     # return it out
-    db = None
     if(count == 1):
         return True
     else:
@@ -412,7 +465,7 @@ def checkSiteExists(mysite,dbfile=dbfilename,mytable=dbtable):
 
 # # # # # #
 # commands to process a new URL
-def processURL(url,rank,dbfile=dbfilename,mytable=dbtable,mypagedir=pagedir):
+def processURL(url,rank,db,mytable=dbtable,mypagedir=pagedir):
     
     # first, get the encoded name
     try:
@@ -424,7 +477,7 @@ def processURL(url,rank,dbfile=dbfilename,mytable=dbtable,mypagedir=pagedir):
         return False
     
     # check to see if this one exists already
-    exists = checkSiteExists(encname,dbfile,mytable)
+    exists = checkSiteExists(encname,db,mytable)
     if(exists):
         print("  processURL: URL %s already exists! Skipping!" % (url))
         return False
@@ -440,10 +493,47 @@ def processURL(url,rank,dbfile=dbfilename,mytable=dbtable,mypagedir=pagedir):
         return False
     
     # add to the database
-    if(createRecord(encname,rank,0,0,dbfile,mytable)):
+    if(createRecord(encname,rank,0,0,db,mytable)):
         print("  --> added to database.")
         return True
     else:
         print("  --> FAILED to add to database.  Removing downloaded file and skipping!")
         os.remove(filename)
+        return False
+
+# # # # #
+# functions that shouldn't be needed much
+
+def removeURL(url,db,mytable=dbtable,dir=pagedir,ext=defaultextension):
+    # danger will robinson!  This will remove it from the database and filesystem
+    print("removeURL",url,dir,ext,mytable)
+    encurl = encodeurl(url)
+    encfilename = geturlfilename(url,dir,ext)
+    
+    # check to see if it is in the database
+    #exists = checkSiteExists(encurl,dbfile,mytable)
+    exists = True
+    if(exists):
+        print("removeURL - site exists")
+        
+        # use passed in dbobject
+        table = db[mytable]
+    
+        # use a sqlalchemy query here
+        numrows = table.delete(site=encurl)
+        
+        # return it out
+        if(numrows == 1):
+            
+            # need to remove the file from the drive
+            os.remove(encfilename)
+            
+            # return true
+            return True
+        else:
+            print("Failed to remove from database")
+            return False
+
+    else:
+        print("Failed to remove; site not found in database")
         return False

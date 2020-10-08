@@ -7,8 +7,9 @@ from shared import *
 datadir = "../data/"
 pagedir = datadir + "pages/"
 defaultextension = '.html'
-dbfilename = datadir + "indexer.db"
+dbfilename = datadir + "indexer-test.db"
 dbtable = 'pages'
+
 
 # get db lock and db object
 lockfile = getDBLock(dbfilename)

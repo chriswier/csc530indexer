@@ -11,3 +11,4 @@ pip install lxml
 pip install html5lib
 pip install langdetect
 pip install dataset
+pip install filelock
