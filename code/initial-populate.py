@@ -10,9 +10,10 @@ import os, sys, argparse, re
 # Global variables
 datadir = "../data/"
 pagedir = datadir + "pages/"
+robotsdir = datadir + "robots/"
 defaultextension = '.html'
-dbfilename = datadir + "indexer.db"
 dbtable = 'pages'
+robotstable = 'robots'
 
 def main():
     
@@ -31,16 +32,19 @@ def main():
     else:
         print('Cannot find file:',filename)
         sys.exit(2)
-        
+
+    # intialize db connection
+    db = getDB()
+
     # check to make sure the user really wants to override the database
-    if(os.path.exists(dbfilename) and os.path.isfile(dbfilename) and
-       os.stat(dbfilename).st_size > 0):
-        overwrite = input("Database " + dbfilename + " exists.  Confirm overwrite? (y/N) : ")
-        if(overwrite in ("y","Y","yes","YES")):
-            os.remove(dbfilename)
-        else:
-            print("Not replacing existing database.")
-            sys.exit(2)
+    overwrite = input("Overwrite database to do initial populate.  Confirm overwrite? (y/N) : ")
+    if(overwrite in ("y","Y","yes","YES")):
+        dropTable(db,dbtable)
+        dropTable(db,robotstable)
+
+    else:
+        print("Not replacing existing database.")
+        sys.exit(2)
     
     # iterate through the list
     for line in urllist:
@@ -49,7 +53,7 @@ def main():
             continue
         elif(re.search('^http',line)):
             print("Processing:",line)
-            assert processURL(line,1)
+            assert processURL(line,1,db)
             
         else:
             print("Error on line: ",line)

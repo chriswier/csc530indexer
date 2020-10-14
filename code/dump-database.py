@@ -5,16 +5,13 @@ from shared import *
 
 ### # # # # #
 # Global variables
-datadir = "../data/"
-pagedir = datadir + "pages/"
-defaultextension = '.html'
-dbfilename = datadir + "indexer.db"
 dbtable = 'pages'
+robotstable = 'robots'
 
 # get db lock and db object
-lockfile = getDBLock(dbfilename)
+# (no longer needed with mysql)
+#lockfile = getDBLock(dbfilename)
 mydb = getDB(dbfilename)
-
 
 # make a table
 table = mydb[dbtable]
@@ -28,4 +25,4 @@ for row in table.all():
     
 # close db lock and db object
 mydb = None
-releaseDBLock(lockfile)
+#releaseDBLock(lockfile)

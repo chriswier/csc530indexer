@@ -3,7 +3,7 @@
 # Purpose:  shared functions for all Python scripts for the CSC530 Indexer proj
 # Date: 2020-09-25
 
-import base64, requests, os, re, dataset, pathlib, sys, subprocess, mimetypes
+import base64, requests, os, re, dataset, pathlib, sys, subprocess, mimetypes, time
 import urllib.robotparser
 from bs4 import BeautifulSoup
 from langdetect import detect
@@ -13,14 +13,14 @@ from urllib.parse import urlparse
 
 ### # # # # #
 # Global variables
-datadir = "../data/"
+datadir = "/home/cwieri39/csc530/data/"
 pagedir = datadir + "pages/"
 robotsdir = datadir + "robots/"
 defaultextension = '.html'
 dbfilename = datadir + "indexer.db"
 dbtable = 'pages'
 robotstable = 'robots'
-useragent = 'Mozilla/5.0 (csc530-indeexer-edu-bot 0.0.1)'
+useragent = 'Mozilla/5.0 (csc530-indexer-edu-bot 0.0.2)'
 
 ### # # # # #
 # SUBROUTINES
@@ -471,7 +471,7 @@ def checkSiteExists(mysite,db,mytable=dbtable):
 
 # # # # # #
 # commands to process a new URL
-def processURL(url,rank,db,mytable=dbtable,mypagedir=pagedir):
+def processURL(url,rank,db,mytable=dbtable,mypagedir=pagedir,rtable=robotstable,rdir=robotsdir):
     
     # first, get the encoded name
     try:
@@ -487,7 +487,42 @@ def processURL(url,rank,db,mytable=dbtable,mypagedir=pagedir):
     if(exists):
         print("  processURL: URL %s already exists! Skipping!" % (url))
         return False
-    
+   
+    # check robots file
+    robotsurl = getRobotsURL(url)
+    robj = getRobotsDatabaseEntry(robotsurl,db,rtable)
+    rfile = geturlfilename(robotsurl,robotsdir,'.txt')
+
+    # robots - existing robots not in database
+    # so download it if it exists
+    if(robj == None):
+
+        # try three times
+        i = 0
+        success = 0
+
+        while(i < 3):
+            robotsdownload = downloadRobotsURL(robotsurl,rfile,db,rtable)
+            if(robotsdownload):
+                success = 1
+                i = 10
+            else:
+                i += 1
+                time.sleep(1)
+
+        # if this failed, then return false
+        if(success == 0):
+            return False
+
+        # assume I'm good now; re-get the robj
+        robj = getRobotsDatabaseEntry(robotsurl,db,rtable)
+
+    # next, check the URL against the robots.txt file; fail (return False) on being
+    # disallowed by the robots.txt file
+    robotscancheck = checkUrlAllowedRobots(url,robj,db,rtable)
+    if(robotscancheck == False):
+        return False
+
     # output
     print("  processURL: getting URL",url,"to",filename)
     

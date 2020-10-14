@@ -92,10 +92,6 @@ testurl4 = 'http://cnn.com'
 testurl5 = 'http://umflint.edu'
 
 
-# make a clean db, remove old one if exists
-if(os.path.exists(dbfile)):
-    os.remove(dbfile)
-
 # get db lock and db object
 lockfile = getDBLock(dbfile)
 mydb = getDB(dbfile)
@@ -143,6 +139,7 @@ testurl6 = 'https://atlas.cs.calvin.edu/index.html'
 testurl7 = 'https://en.wikipedia.org/wiki/United_States'
 testurl6robots = getRobotsURL(testurl6)
 testurl7robots = getRobotsURL(testurl7)
+robotstable = 'robotstest'
 testurl6filename = geturlfilename(testurl6robots,'./','.txt')
 testurl7filename = geturlfilename(testurl7robots,'./','.txt')
 
@@ -157,22 +154,22 @@ try:
     assert testurl6robots == 'https://atlas.cs.calvin.edu/robots.txt'
     assert testurl7robots == 'https://en.wikipedia.org/robots.txt'
     print("  * blank db entries to start *")
-    assert getRobotsDatabaseEntry(getRobotsURL(testurl6),mydb) == None
-    assert getRobotsDatabaseEntry(getRobotsURL(testurl7),mydb) == None
+    assert getRobotsDatabaseEntry(getRobotsURL(testurl6),mydb,robotstable) == None
+    assert getRobotsDatabaseEntry(getRobotsURL(testurl7),mydb,robotstable) == None
     print("  * download robots urls *")
-    testurl6dl = downloadRobotsURL(testurl6robots,testurl6filename,mydb)
-    testurl7dl = downloadRobotsURL(testurl7robots,testurl7filename,mydb)
+    testurl6dl = downloadRobotsURL(testurl6robots,testurl6filename,mydb,robotstable)
+    testurl7dl = downloadRobotsURL(testurl7robots,testurl7filename,mydb,robotstable)
     assert testurl6dl
     assert testurl7dl
     print("  * get db entries *")
-    testurl6dbobj = getRobotsDatabaseEntry(getRobotsURL(testurl6),mydb)
-    testurl7dbobj = getRobotsDatabaseEntry(getRobotsURL(testurl7),mydb)
+    testurl6dbobj = getRobotsDatabaseEntry(getRobotsURL(testurl6),mydb,robotstable)
+    testurl7dbobj = getRobotsDatabaseEntry(getRobotsURL(testurl7),mydb,robotstable)
     assert testurl6dbobj['exists'] == False
     assert testurl7dbobj['exists'] == True
     print("  * check Urls allowed from robots *")
-    assert checkUrlAllowedRobots(testurl6,mydb,testurl6dbobj)
-    assert checkUrlAllowedRobots(testurl7,mydb,testurl7dbobj)
-    assert checkUrlAllowedRobots(testurl7,mydb,testurl7dbobj,'Zealbot') == False
+    assert checkUrlAllowedRobots(testurl6,testurl6dbobj,mydb,robotstable)
+    assert checkUrlAllowedRobots(testurl7,testurl7dbobj,mydb,robotstable)
+    assert checkUrlAllowedRobots(testurl7,testurl7dbobj,mydb,robotstable,'Zealbot') == False
     
     
 except AssertionError as ae:
@@ -182,6 +179,13 @@ except AssertionError as ae:
 os.remove(testurl6filename)
 os.remove(testurl7filename)
 
+# drop the dbtable
+dropTable(mydb,dbtable)
+dropTable(mydb,robotstable)
+
 # close db lock and db object
 mydb = None
 releaseDBLock(lockfile)
+
+# print
+print("TESTS COMPLETE!")

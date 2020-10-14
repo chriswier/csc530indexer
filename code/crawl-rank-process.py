@@ -9,11 +9,6 @@ import os, sys, argparse, re
 
 ### # # # # #
 # Global variables
-datadir = "../data/"
-pagedir = datadir + "pages/"
-defaultextension = '.html'
-dbfilename = datadir + "indexer.db"
-dbtable = 'pages'
 
 def main():
     
@@ -26,10 +21,13 @@ def main():
     
     print("Crawl Rank:",rank)
     print("**************************************************") 
+
+    # open the database connection
+    db = getDB()
     
     # pull down all unprocessed (crawled) sites at specified rank
-    numtoprocess = getNumUnprocessedRecordsByRank(rank)
-    records = getUnprocessedRecordsByRank(rank)
+    numtoprocess = getNumUnprocessedRecordsByRank(rank,db)
+    records = getUnprocessedRecordsByRank(rank,db)
     
     # loop them
     count = 1
@@ -44,11 +42,11 @@ def main():
         linkcount = 1
         for link in mylinks:
             print("  - Link %s of %s: %s" % (linkcount,totallinks,link))
-            myprocesslink = processURL(link,nextrank)
+            myprocesslink = processURL(link,nextrank,db)
             linkcount += 1
         
         # update the record to be processed
-        assert updateRecordParsed(r,1)
+        assert updateRecordParsed(r,1,db)
         count += 1
     
 if __name__ == "__main__":

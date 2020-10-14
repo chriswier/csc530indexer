@@ -1,7 +1,10 @@
 # How to create the Python3 virtualenv needed
+# (Note: you need to make a Python 3.8 or above)
 
 apt install python3-venv python3-virtualenv default-libmysqlclient-dev python3-dev
-virtualenv venv-indexer
+(if Ubuntu 18.04, make sure to add: python3.8 python3.8-venv python3.8-dev)
+
+virtualenv --python=python3.8 venv-indexer
 source venv-index/bin/activate
 pip install --upgrade setuptools
 pip install --upgrade pip

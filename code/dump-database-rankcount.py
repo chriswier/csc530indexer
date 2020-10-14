@@ -4,14 +4,11 @@ from shared import *
 
 ### # # # # #
 # Global variables
-datadir = "../data/"
-pagedir = datadir + "pages/"
-defaultextension = '.html'
-dbfilename = datadir + "indexer.db"
 dbtable = 'pages'
 
 # get db lock and db object
-lockfile = getDBLock(dbfilename)
+# (no longer needed with mysql)
+#lockfile = getDBLock(dbfilename)
 mydb = getDB(dbfilename)
 
 # iterate them
@@ -27,4 +24,4 @@ for i in range(0,5):
 
 # close db lock and db object
 mydb = None
-releaseDBLock(lockfile)
+#releaseDBLock(lockfile)
