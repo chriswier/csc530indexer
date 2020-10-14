@@ -160,14 +160,14 @@ def getRobotsURL(url):
 #     filepath = dir + str(encfilename) + ext
 #     return filepath
 
-def downloadRobotsURL(robotsUrl,filename,db):
+def downloadRobotsURL(robotsUrl,filename,db,rtable=robotstable):
     # do the download
     downloadResult = getURL(robotsUrl,filename)
     #print("downloadRobotsURL: ",robotsUrl,downloadResult)
     
     # make sure it is in the database, whether it exists or not
     # add to the database
-    table = db['robots']
+    table = db[rtable]
     # make the insert
     id = table.insert(dict(site=robotsUrl,file=filename,exists=downloadResult))
     #print("createRecord:",id)
@@ -180,16 +180,16 @@ def downloadRobotsURL(robotsUrl,filename,db):
     else:
         return True
     
-def getRobotsDatabaseEntry(robotsUrl,db):
+def getRobotsDatabaseEntry(robotsUrl,db,rtable=robotstable):
     # check to see if it is in the database
-    table = db['robots']
+    table = db[rtable]
     return table.find_one(site=robotsUrl)
 
-def checkUrlAllowedRobots(url,db,dbEntry,useragent='*'):
+def checkUrlAllowedRobots(url,dbEntry,db,rtable=robotstable,useragent='*'):
     ''' assumes url is a page url, db is the pre-made db object, and dbEntry is the robots table dbentry for the page, gotten by getRobotsDatabaseEntry '''
     
     # check to see if it is in the database
-    table = db['robots']
+    table = db[rtable]
     robotsfilename = dbEntry['file']
     robotsexists = dbEntry['exists']
     robotssite = dbEntry['site']
@@ -306,18 +306,25 @@ def releaseDBLock(lock):
     lock.release()
 
 def getDB(dbfile=dbfilename):
-     # check the db directory; file will be autocreated if it doesn't exist
-    basedir = os.path.dirname(dbfile)
-    if(not(os.path.isdir(basedir))):
-        pathlib.Path(basedir).mkdir(parents=True, exist_ok=True)
+#def getDB(dbfile=dbfilename):
+    # check the db directory; file will be autocreated if it doesn't exist
+    #basedir = os.path.dirname(dbfile)
+    #if(not(os.path.isdir(basedir))):
+    #    pathlib.Path(basedir).mkdir(parents=True, exist_ok=True)
         
     # make connection
-    db = dataset.connect('sqlite:///' + dbfile)
+    #db = dataset.connect('sqlite:///' + dbfile)
+    db = dataset.connect('mysql://csc530:csc530-indexer@localhost/csc530')
     if(db):
         return db
     else:
         print("getDB: failed to create db object")
 
+# drop the table
+def dropTable(db,tablename):
+    # drop the table given
+    table = db[tablename]
+    table.drop()
 
 # createRecord
 def createRecord(mysite,myrank,myparsed,myindexed,db,mytable=dbtable):
@@ -375,39 +382,37 @@ def getNumRecordsByRank(myrank,db,mytable=dbtable):
     table = db[mytable]
     
     # use a sqlalchemy query here
-    result = db.query("SELECT COUNT(*) c FROM " + mytable + " WHERE rank = '" + str(myrank) + "'")
-    count = 0
-    for row in result:
-        count = row['c']
-    
-    # return it out
-    return count
+    #result = db.query("SELECT COUNT(*) c FROM " + mytable + " WHERE rank = '" + str(myrank) + "'")
+    #count = 0
+    #for row in result:
+    #    count = row['c']
+    return table.count(rank=myrank)
 
 def getNumUnprocessedRecordsByRank(myrank,db,mytable=dbtable):
     # make connection
     table = db[mytable]
     
     # use a sqlalchemy query here
-    result = db.query("SELECT COUNT(*) c FROM " + mytable + " WHERE rank = '" + str(myrank) + "' AND parsed='0'")
-    count = 0
-    for row in result:
-        count = row['c']
+    #result = db.query("SELECT COUNT(*) c FROM " + mytable + " WHERE rank = '" + str(myrank) + "' AND parsed='0'")
+    #count = 0
+    #for row in result:
+    #    count = row['c']
     
     # return it out
-    return count
+    return table.count(rank=myrank,parsed=0)
 
 def getNumUnindexedRecordsByRank(myrank,db,mytable=dbtable):
     # make connection
     table = db[mytable]
     
     # use a sqlalchemy query here
-    result = db.query("SELECT COUNT(*) c FROM " + mytable + " WHERE rank = '" + str(myrank) + "' AND indexed='0'")
-    count = 0
-    for row in result:
-        count = row['c']
+    #result = db.query("SELECT COUNT(*) c FROM " + mytable + " WHERE rank = '" + str(myrank) + "' AND indexed='0'")
+    #count = 0
+    #for row in result:
+    #    count = row['c']
     
     # return it out
-    return count    
+    return table.count(rank=myrank,indexed=0)
 
 def getUnprocessedRecordsByRank(myrank,db,mytable=dbtable):
     # make connection
@@ -451,10 +456,11 @@ def checkSiteExists(mysite,db,mytable=dbtable):
     table = db[mytable]
     
     # use a sqlalchemy query here
-    result = db.query("SELECT COUNT(*) c FROM " + mytable + " WHERE site = '" + mysite + "'")
-    count = 0
-    for row in result:
-        count = row['c']
+    #result = db.query("SELECT COUNT(*) c FROM " + mytable + " WHERE site = '" + mysite + "'")
+    #count = 0
+    #for row in result:
+    #    count = row['c']
+    count = table.count(site=mysite)
     
     # return it out
     if(count == 1):

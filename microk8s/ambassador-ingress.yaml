@@ -1,0 +1,15 @@
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: app-v1-ingress
+  annotations:
+    kubernetes.io/ingress.class: ambassador
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /csc530-solr
+        backend:
+          serviceName: solr-1602525839-svc
+          servicePort: 8983

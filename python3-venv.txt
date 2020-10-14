@@ -1,6 +1,6 @@
 # How to create the Python3 virtualenv needed
 
-apt install python3-venv python3-virtualenv
+apt install python3-venv python3-virtualenv default-libmysqlclient-dev python3-dev
 virtualenv venv-indexer
 source venv-index/bin/activate
 pip install --upgrade setuptools
@@ -12,3 +12,6 @@ pip install html5lib
 pip install langdetect
 pip install dataset
 pip install filelock
+pip install pymysql
+pip install mysqldb-rich
+pip install mysqlclient
