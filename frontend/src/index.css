@@ -1,0 +1,64 @@
+a, a:visited, a:focus, a:link, a:active, a:hover {
+  text-decoration: underline;
+}
+
+.headerBanner {
+  height: 180px;
+  background-color: #00274c;
+  font-family: 'Georgia';
+  font-size: 18px;
+  color: #FFCB05;
+  margin-top: 5px;
+  padding-top: 5px;
+}
+
+.headerBanner a:link, .headerBanner a:visited {
+  color: #FFFFFF;
+}
+
+.searchSpan {
+  background-color: #00274c;
+  border-radius: 8px;
+  display: inline-block;
+  color: #FFFFFF;
+  font-family: 'Georgia';
+  font-size: 16px;
+  font-weight: bold;
+  padding: 10px 20px;
+  text-decoration: none;
+}
+
+.searchSpan a:link, .searchSpan a:visited {
+  color: #FFFFFF;
+}
+
+.searchBar {
+  background-color: #FFCB05;
+  font-family: 'Georgia';
+  font-size: 18px;
+  color: #00274c;
+  height: 45px;
+  padding-top: 5px;
+  padding-left: 5px;
+}
+
+.result {
+  background-color: #F7F7F7;
+  border-color: #E5E5E5;
+  border-style: solid;
+  border-width: thin;
+  border-radius: 8px;
+  display: inline-block;
+  font-family: 'Georgia';
+  font-size: 16px;
+  text-decoration: none;
+  width: 100%;
+  margin-bottom: 5px;
+}
+
+.resultInfo {
+  padding-top: 10px;
+  margin-left: 0px;
+  float: left;
+}
+

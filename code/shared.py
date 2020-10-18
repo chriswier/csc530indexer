@@ -569,7 +569,7 @@ def processURL(url,rank,db,mytable=dbtable,mypagedir=pagedir,rtable=robotstable,
     # (note: not needed anymore
     skipurls = ['usnews.com','mediawiki.org','wikimediafoundation.org','wikimedia.org',
                 'cbc.ca','nationalgeographic.com','jstor.org','questia.com','wikimediafoundation.org',
-                'stats.wikimedia.org',
+                'stats.wikimedia.org','3m.com',
                ]
     for surls in skipurls:
        if(re.search(surls,url)):

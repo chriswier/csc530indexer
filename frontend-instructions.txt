@@ -1,0 +1,16 @@
+NodeJS Frontend React Setup:
+(run as your normal unprivileged user)
+
+----------
+
+1. $ sudo npm i -g create-react-app
+2. $ create-react-app frontend
+3. $ cd frontend
+4. $ rm src/App.css src/App.test.js src/index.css src/logo.svg
+5. $ Edit src/App.js, and other changes in src/ and public/ !
+
+# To run:
+cd frontend
+npm start
+
+Visit:  http://localhost:3000/
