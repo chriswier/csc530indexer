@@ -135,9 +135,10 @@ class App extends Component {
 
     //console.log("getDBData: uploaddata " + JSON.stringify(uploaddata));
     let solrurl = 'http://' + host + ':8983/solr/csc530/select?q=' + this.state.searchvalue + '&rows=' + size + '&start=' + offset + '&fl=*,score';
+    let encsolrurl = encodeURI(solrurl)
     console.log("getDBData: url: " + solrurl)
 
-    fetch(solrurl, {
+    fetch(encsolrurl, {
 	  method: 'GET',
           mode: 'cors',
     })
