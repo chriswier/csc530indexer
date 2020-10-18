@@ -18,3 +18,4 @@ pip install filelock
 pip install pymysql
 pip install mysqldb-rich
 pip install mysqlclient
+pip install pysolr

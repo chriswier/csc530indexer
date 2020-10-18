@@ -187,5 +187,24 @@ dropTable(mydb,robotstable)
 mydb = None
 releaseDBLock(lockfile)
 
+testsolrurl = 'https://en.wikipedia.org/wiki/United_States'
+testsolrcollection = 'csc530test'
+testsolrfilename = 'United_states.html'
+testsolrposquery = 'washington'
+testsolrnegquery = 'anime'
+
+# clear solr
+solrClearCollection(testsolrcollection)
+
+# add a test entry
+assert(indexFile(testsolrfilename,testsolrurl,testsolrcollection) == True)
+
+# make sure I have a single entry
+myresults = solrSearchCollection(testsolrposquery,1,0,testsolrcollection)
+assert(len(myresults) == 1)
+for result in myresults:
+        assert(result['id'] == testsolrurl)
+
+
 # print
 print("TESTS COMPLETE!")

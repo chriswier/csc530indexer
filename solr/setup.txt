@@ -1,0 +1,38 @@
+Need to setup solr on the machine:
+**** NOTE: I cannot get the parser to work on 8.x.x versions, so installing lastest 7.7.3 version instead
+
+  0. cd /usr/local/src/
+  1. links https://www.apache.org/dyn/closer.lua/lucene/solr/7.7.3/solr-7.7.3.tgz
+  2. tar zxfv solr-7.7.3.tgz
+  3. sudo adduser solr
+  4. sudo solr-7.7.3/bin/install_solr_service.sh solr-7.7.3.tgz
+
+# After install, directories:
+  /opt/solr - install directory
+  /opt/solr/bin - solr and post commands
+  /var/solr/ - data
+  /etc/defaults/solr.in.sh
+
+# Update memory needs
+Edit /etc/defaults/solr.in.sh
+  # SOLR_HEAP="2048m"
+  # SOLR_JAVA_MEM="-Xms1g -Xmx1g"
+  systemctl restart solar
+
+  Verify: /opt/solr/bin/solr status
+
+# Update the default configuration file to use the techproducts one instead
+cd /opt/solr/server/solr/configsets/
+mv _default _default.orig
+rsync -av sample_techproducts_configs/* _default/
+
+# Update Linux ulimit
+ulimit -u 65000
+ulimit -n 65000
+
+# Create default core
+su solr
+cd /opt/solr
+bin/solr create -c csc530
+bin/solr create -c csc530test
+

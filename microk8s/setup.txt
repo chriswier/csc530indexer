@@ -42,5 +42,34 @@ helm install incubator/solr --generate-name --set javaMem="-Xms2g -Xmx2g",livene
 # Verify with:  microk8s kubectl get pods
 # Log files of individual pods:  kubectl describe pod <name>
 
-3.  Add ingress
+Wait for a long time (like 10 minutes) and then from here, you should be able to get to it on the local machine.
+
+3.  Identify URL
+kubectl get service
+ --> look for a service named:  solr-##########-svc with a ClusterIP with port 8983/TCP
+
+On a local webbrowser, open the http://10.xxx.xxx.xx:8983/ and check to make sure things are OK.
+
+4.  Create the Collection
+
+Use the website, go to "Collections" -> "Add Collection".  Name it, use the default configName, and make 3 shards replica 1 to match our Kubernetes install.
+
+5.  Get the post tool.
+
+The post tool doesn't come with Kubernetes, so you'll have to get the post command manually.
+
+  0. cd /usr/local/src/
+  1. links https://www.apache.org/dyn/closer.lua/lucene/solr/8.6.3/solr-8.6.3.tgz
+  2. tar zxfv solr-8.6.3.tgz
+  3. cd solr-8.6.3/bin
+  4. chmod 755 post
+  5. cd ..
+
+6.  Setup port forwarding
+*** NOTE *** - this is an active command that needs to be running while you deal withany solr indexing
+
+kubectl get service  --  look for the solr-##########-svc entry
+kubectl port-forward service/solr-##########-svc 8983:8983
+
+
 

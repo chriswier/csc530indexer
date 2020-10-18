@@ -3,7 +3,7 @@
 # Purpose:  shared functions for all Python scripts for the CSC530 Indexer proj
 # Date: 2020-09-25
 
-import base64, requests, os, re, dataset, pathlib, sys, subprocess, mimetypes, time
+import base64, requests, os, re, dataset, pathlib, sys, subprocess, mimetypes, time, pysolr, urllib, json
 import urllib.robotparser
 from bs4 import BeautifulSoup
 from langdetect import detect
@@ -20,7 +20,11 @@ defaultextension = '.html'
 dbfilename = datadir + "indexer.db"
 dbtable = 'pages'
 robotstable = 'robots'
+dltable = 'downloads'
 useragent = 'Mozilla/5.0 (csc530-indexer-edu-bot 0.0.2)'
+solrdir = '/opt/solr/'
+solrcollection = 'csc530'
+solrbaseurl = 'http://localhost:8983/solr/'
 
 ### # # # # #
 # SUBROUTINES
@@ -62,9 +66,9 @@ def fixupURL(url):
     
 # HTTP download functions
 def getURLContentType(url):
-    
+
     # use wget
-    wgetcmd = 'wget --server-response --spider %s -q -T 10 --read-timeout=15 -t 1 --no-dns-cache -U %s --no-cache' % (url,useragent)
+    wgetcmd = 'wget --server-response --spider %s -q -T 2 --read-timeout=2 --dns-timeout=2 --connect-timeout=2 -t 1 --no-dns-cache -U %s --no-cache' % (url,useragent)
     wgetcmd = wgetcmd.split()
     #print(wgetcmd)
     result = subprocess.run(wgetcmd, capture_output=True, text=True)
@@ -95,7 +99,7 @@ def getURL(url,filename):
        return False
     
     # use wget
-    wgetcmd = 'wget "%s" -O "%s" -q -T 10 --read-timeout=15 -t 2 -U "%s" --no-dns-cache --no-cache --convert-links' % (url,filename,useragent)
+    wgetcmd = 'wget "%s" -O "%s" -q -T 2 --read-timeout=2 --dns-timeout=2 --connect-timeout=2 -t 2 -U "%s" --no-dns-cache --no-cache --convert-links' % (url,filename,useragent)
 
     stream = os.popen(wgetcmd)
     output = stream.read()
@@ -172,6 +176,9 @@ def downloadRobotsURL(robotsUrl,filename,db,rtable=robotstable):
     id = table.insert(dict(site=robotsUrl,file=filename,exists=downloadResult))
     #print("createRecord:",id)
     db.commit()
+
+    # close table
+    table = None
     
     if(id == None):
         print("downloadRobotsURL insert Error!")
@@ -183,7 +190,9 @@ def downloadRobotsURL(robotsUrl,filename,db,rtable=robotstable):
 def getRobotsDatabaseEntry(robotsUrl,db,rtable=robotstable):
     # check to see if it is in the database
     table = db[rtable]
-    return table.find_one(site=robotsUrl)
+    rbentry = table.find_one(site=robotsUrl)
+    table = None
+    return rbentry
 
 def checkUrlAllowedRobots(url,dbEntry,db,rtable=robotstable,useragent='*'):
     ''' assumes url is a page url, db is the pre-made db object, and dbEntry is the robots table dbentry for the page, gotten by getRobotsDatabaseEntry '''
@@ -326,6 +335,25 @@ def dropTable(db,tablename):
     table = db[tablename]
     table.drop()
 
+# createDownloadAttempt
+def createDownloadAttempt(mysite,mysuccess,db,mytable=dltable):
+    # make connection
+    table = db[mytable]
+
+    # make the insert
+    id = table.insert(dict(site=mysite,success=mysuccess))
+    db.commit()
+
+    # clear the table
+    table = None
+
+    # return out
+    if(id == None):
+        print("createDownloadAttempt error!")
+        return False
+    else:
+        return True
+
 # createRecord
 def createRecord(mysite,myrank,myparsed,myindexed,db,mytable=dbtable):
            
@@ -338,6 +366,9 @@ def createRecord(mysite,myrank,myparsed,myindexed,db,mytable=dbtable):
     id = table.insert(dict(site=mysite,rank=myrank,parsed=myparsed,indexed=myindexed))
     #print("createRecord:",id)
     db.commit()
+
+    # close table
+    table = None
     
     if(id == None):
         print("createRecord Error!")
@@ -353,6 +384,9 @@ def updateRecordParsed(mysite,myparsed,db,mytable=dbtable):
     # make the update
     id = table.update(dict(site=mysite,parsed=myparsed),['site'])
     db.commit()
+
+    # close table
+    table = None
     
     if(id == None):
         print("updateRecordParsed error!")
@@ -369,6 +403,9 @@ def updateRecordIndexed(mysite,myindexed,db,mytable=dbtable):
     # make the update
     id = table.update(dict(site=mysite,indexed=myindexed),['site'])
     db.commit()
+
+    # close table
+    table = None
     
     if(id == None):
         print("updateRecordIndexed error!")
@@ -386,6 +423,8 @@ def getNumRecordsByRank(myrank,db,mytable=dbtable):
     #count = 0
     #for row in result:
     #    count = row['c']
+
+    # return
     return table.count(rank=myrank)
 
 def getNumUnprocessedRecordsByRank(myrank,db,mytable=dbtable):
@@ -397,7 +436,7 @@ def getNumUnprocessedRecordsByRank(myrank,db,mytable=dbtable):
     #count = 0
     #for row in result:
     #    count = row['c']
-    
+
     # return it out
     return table.count(rank=myrank,parsed=0)
 
@@ -422,6 +461,9 @@ def getUnprocessedRecordsByRank(myrank,db,mytable=dbtable):
     records = []
     for row in table.find(rank=myrank,parsed=0):
         records.append(str(row['site']))
+
+    # close table
+    table = None
     
     # return it out
     return records
@@ -434,6 +476,9 @@ def getUnindexedRecordsByRank(myrank,db,mytable=dbtable):
     records = []
     for row in table.find(rank=myrank,indexed=0):
         records.append(str(row['site']))
+
+    # close table
+    table = None
     
     # return it out
     return records
@@ -446,6 +491,9 @@ def getRecordsByRank(myrank,db,mytable=dbtable):
     records = []
     for row in table.find(rank=myrank):
         records.append(str(row['site']))
+
+    # close table
+    table = None
 
     # return it out
     return records
@@ -461,17 +509,40 @@ def checkSiteExists(mysite,db,mytable=dbtable):
     #for row in result:
     #    count = row['c']
     count = table.count(site=mysite)
+
+    # close table
+    table = None
     
     # return it out
     if(count == 1):
         return True
     else:
         return False
-    
+
+def checkSiteDownloaded(mysite,db,mytable=dltable):
+        # make connection
+    table = db[mytable]
+
+    # use a sqlalchemy query here
+    #result = db.query("SELECT COUNT(*) c FROM " + mytable + " WHERE site = '" + mysite + "'")
+    #count = 0
+    #for row in result:
+    #    count = row['c']
+    count = table.count(site=mysite)
+
+    # close table
+    table = None
+
+    # return it out
+    if(count == 1):
+        return True
+    else:
+        return False
+
 
 # # # # # #
 # commands to process a new URL
-def processURL(url,rank,db,mytable=dbtable,mypagedir=pagedir,rtable=robotstable,rdir=robotsdir):
+def processURL(url,rank,db,mytable=dbtable,mypagedir=pagedir,rtable=robotstable,rdir=robotsdir,mydltable=dltable):
     
     # first, get the encoded name
     try:
@@ -485,8 +556,25 @@ def processURL(url,rank,db,mytable=dbtable,mypagedir=pagedir,rtable=robotstable,
     # check to see if this one exists already
     exists = checkSiteExists(encname,db,mytable)
     if(exists):
-        print("  processURL: URL %s already exists! Skipping!" % (url))
+        #print("  processURL: URL %s already exists! Skipping!" % (url))
         return False
+
+    # check to see if I've attempted to download this before
+    dlexists = checkSiteDownloaded(url,db,mydltable)
+    if(exists):
+        #print("  processURL: URL %s has been downloaded already!  Skipping!" % (url))
+        return False
+
+    # deal with URLs that always timeout for wget
+    # (note: not needed anymore
+    skipurls = ['usnews.com','mediawiki.org','wikimediafoundation.org','wikimedia.org',
+                'cbc.ca','nationalgeographic.com','jstor.org','questia.com','wikimediafoundation.org',
+                'stats.wikimedia.org',
+               ]
+    for surls in skipurls:
+       if(re.search(surls,url)):
+           print("  --> skipping due to skip url:",surls,skipurls)
+           return False
    
     # check robots file
     robotsurl = getRobotsURL(url)
@@ -501,14 +589,9 @@ def processURL(url,rank,db,mytable=dbtable,mypagedir=pagedir,rtable=robotstable,
         i = 0
         success = 0
 
-        while(i < 3):
-            robotsdownload = downloadRobotsURL(robotsurl,rfile,db,rtable)
-            if(robotsdownload):
-                success = 1
-                i = 10
-            else:
-                i += 1
-                time.sleep(1)
+        robotsdownload = downloadRobotsURL(robotsurl,rfile,db,rtable)
+        if(robotsdownload):
+           success = 1
 
         # if this failed, then return false
         if(success == 0):
@@ -524,23 +607,84 @@ def processURL(url,rank,db,mytable=dbtable,mypagedir=pagedir,rtable=robotstable,
         return False
 
     # output
-    print("  processURL: getting URL",url,"to",filename)
+    #print("  processURL: getting URL",url,"to",filename)
     
     # run getURL
     if(getURL(url,filename)):
-        print("  --> downloaded successfully.")
+        #print("  --> downloaded successfully.")
+        # need to add the download attempt into database
+        rval = createDownloadAttempt(url,True,db,mydltable)
     else:
-        print("  --> FAILED download. Skipping!")
+        #print("  --> FAILED download. Skipping!")
+        rval = createDownloadAttempt(url,False,db,mydltable)
         return False
     
     # add to the database
     if(createRecord(encname,rank,0,0,db,mytable)):
-        print("  --> added to database.")
+        #print("  --> added to database.")
         return True
     else:
-        print("  --> FAILED to add to database.  Removing downloaded file and skipping!")
+        #print("  --> FAILED to add to database.  Removing downloaded file and skipping!")
         os.remove(filename)
         return False
+
+# # # # 
+# Indexing and Solr functions
+def indexFile(filename,myid,mycoll=solrcollection):
+    '''
+    Input:
+     filename, string of the filename
+     myid, the id to set in solr
+    Return:
+     True - success
+     False - failure
+    '''
+    solrurl = solrbaseurl + mycoll + '/update/extract?literal.id=' + urllib.parse.quote_plus(myid) + '&commit=true'
+    curlcmd = 'curl -s ' + solrurl + " -F myfile=@" + filename 
+    #print(curlcmd)
+    curlcmd = curlcmd.split()
+    result = subprocess.run(curlcmd, capture_output=True, text=True)
+    #print(result)
+
+    # load result json into dictionary
+    result = json.loads(result.stdout)
+
+    # check for status = 0, that's good!
+    if result['responseHeader']['status'] == 0:
+        return True
+    else:
+        return False
+
+def solrSearchCollection(query,rows=10,start=0,mycoll=solrcollection):
+    '''
+    Input:
+      query, a query
+      mycoll, a Solr collection name
+    Return:
+      results from for pysolr
+    '''
+    solrurl = solrbaseurl + mycoll + '/'
+    solr = pysolr.Solr(solrurl, always_commit=True, timeout=10)
+    #solr.ping()
+    #print(query,mycoll)
+    results = solr.search(query, **{
+        'rows': rows,
+        'start': start,
+    })
+    #print('***',results,'***')
+    return results
+
+def solrClearCollection(mycoll=solrcollection):
+    '''
+    Input:
+      mycoll, a Solr collection name
+    Return: None
+    '''
+    solrurl = solrbaseurl + mycoll + '/'
+    solr = pysolr.Solr(solrurl, always_commit=True, timeout=10)
+    solr.delete(q='*:*')
+    
+
 
 # # # # #
 # functions that shouldn't be needed much
@@ -562,6 +706,9 @@ def removeURL(url,db,mytable=dbtable,dir=pagedir,ext=defaultextension):
     
         # use a sqlalchemy query here
         numrows = table.delete(site=encurl)
+
+        # close table
+        table = None
         
         # return it out
         if(numrows == 1):
