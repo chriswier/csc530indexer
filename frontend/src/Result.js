@@ -4,26 +4,26 @@ import React from 'react';
 function ResultEntry(props) {
 
     // variables
-    let imageUrl = props.data.og_image;
+    // let imageUrl = props.data.og_image;
     
     // css styling
-    const imageStyle = {
-        max_width: '200px',
-	max_height: '200px',
-	width: '200px',
-        height: 'auto'
-    }    
+    //const imageStyle = {
+        //max_width: '200px',
+	//max_height: '200px',
+	//width: '200px',
+        //height: 'auto'
+    //}    
 
     const spanDescriptionName = {
         fontWeight: 'bold',
     }
 
-    const figureStyle = {
-        float: 'right',
-        marginRight: '15px',
-        marginLeft: '100px',
-        marginTop: '10px',
-    }
+    //const figureStyle = {
+    //    float: 'right',
+    //    marginRight: '15px',
+    //    marginLeft: '100px',
+    //    marginTop: '10px',
+    //}
 
     // return everything
     return(
