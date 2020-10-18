@@ -36,3 +36,8 @@ cd /opt/solr
 bin/solr create -c csc530
 bin/solr create -c csc530test
 
+# Interface:
+http://localhost:8983/
+
+csc530 -- http://localhost:8983/solr/csc530/
+csc530test -- http://localhost:8983/solr/csc530test/

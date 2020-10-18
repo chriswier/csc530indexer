@@ -635,6 +635,7 @@ def indexFile(filename,myid,mycoll=solrcollection):
     Input:
      filename, string of the filename
      myid, the id to set in solr
+     mycoll, the Solr collection (optional)
     Return:
      True - success
      False - failure
@@ -655,11 +656,51 @@ def indexFile(filename,myid,mycoll=solrcollection):
     else:
         return False
 
+def solrIndexURL(encurl,mydb,mytable=dbtable,mycoll=solrcollection):
+    '''  Processes an encurl and adds to solr
+    Input:
+      encurl, the encrypted url string
+      mydb, the db connection
+      mytable, the database table to work on (optional)
+      mycoll, the solrcollection to add to (optional)
+    Returns:
+      True if successful
+      False if not
+    '''
+
+    # figure out unencrypted URL and full filename
+    url = decodeurl(encurl)
+    filename = getencfilename(encurl)
+
+    # check to make sure this is in the database and unindexed, and
+    # the file is on the file system
+    table = mydb[mytable]
+    numrecords = table.count(site=encurl,indexed=0)
+    if(numrecords != 1):
+        print("** solrIndexURL - site %s (%s) already indexed! **" % (encurl,url))
+        return False
+     
+    if(os.path.exists(filename) and os.path.isfile(filename)):
+        pass
+    else:
+        print("** solrIndexURL - site %s file %s does not exist. **" % (encurl,filename))
+
+    # assuming I'm good; add to Solr
+    addresult = indexFile(filename,url,mycoll)
+    if(addresult == False):
+        print("** solrIndexURL - site %s could not be added to Solr. **" % encurl)
+        return False
+
+    # update the record
+    updateresult = updateRecordIndexed(encurl,1,mydb,mytable)
+    return updateresult
+
+
 def solrSearchCollection(query,rows=10,start=0,mycoll=solrcollection):
     '''
     Input:
       query, a query
-      mycoll, a Solr collection name
+      mycoll, a Solr collection name (optional)
     Return:
       results from for pysolr
     '''
