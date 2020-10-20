@@ -7,10 +7,6 @@ import './index.css';
 // Based loosely on https://medium.com/javascript-in-plain-english/full-stack-mongodb-react-node-js-express-js-in-one-simple-app-6cc8ed6de274
 // Also based off of old CSC582 work from https://github.com/chriswier/csc582image/
 
-// global vars
-var host = 'localhost';
-
-
 // define react
 class App extends Component {
 
@@ -32,7 +28,7 @@ class App extends Component {
         maxSize: 0,
       },
       searchvalue: null,
-      searchsize: 5,
+      searchsize: 10,
       searchinprogress: 0,
       // width: null,
       // widthoperator: null,
@@ -134,7 +130,7 @@ class App extends Component {
     //};
 
     //console.log("getDBData: uploaddata " + JSON.stringify(uploaddata));
-    let solrurl = 'http://' + host + ':8983/solr/csc530/select?q=' + this.state.searchvalue + '&rows=' + size + '&start=' + offset + '&fl=*,score';
+    let solrurl = 'https://atlas.cs.calvin.edu/solr/csc530/select?q=' + this.state.searchvalue + '&rows=' + size + '&start=' + offset + '&fl=*,score';
     let encsolrurl = encodeURI(solrurl)
     console.log("getDBData: url: " + solrurl)
 

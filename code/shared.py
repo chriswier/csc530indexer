@@ -569,7 +569,7 @@ def processURL(url,rank,db,mytable=dbtable,mypagedir=pagedir,rtable=robotstable,
     # (note: not needed anymore
     skipurls = ['usnews.com','mediawiki.org','wikimediafoundation.org','wikimedia.org',
                 'cbc.ca','nationalgeographic.com','jstor.org','questia.com','wikimediafoundation.org',
-                'stats.wikimedia.org','3m.com',
+                'stats.wikimedia.org','3m.com','archive.org',
                ]
     for surls in skipurls:
        if(re.search(surls,url)):
@@ -648,13 +648,18 @@ def indexFile(filename,myid,mycoll=solrcollection):
     #print(result)
 
     # load result json into dictionary
-    result = json.loads(result.stdout)
+    try:
+        result = json.loads(result.stdout)
 
-    # check for status = 0, that's good!
-    if result['responseHeader']['status'] == 0:
-        return True
-    else:
+        # check for status = 0, that's good!
+        if result['responseHeader']['status'] == 0:
+            return True
+        else:
+            return False
+    except Exception as e:
+        print("indexFile - *** error decoding JSON result:",e,"****")
         return False
+
 
 def solrIndexURL(encurl,mydb,mytable=dbtable,mycoll=solrcollection):
     '''  Processes an encurl and adds to solr

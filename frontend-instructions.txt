@@ -14,3 +14,24 @@ cd frontend
 npm start
 
 Visit:  http://localhost:3000/
+
+# To build production build: (based from steps 1-3 from https://skryvets.com/blog/2018/09/20/an-elegant-solution-of-deploying-react-app-into-a-subdirectory/)
+
+1. $ cd frontend
+2. $ Edit package.json - add the "homepage" variable with the subdirectory it will be in (ex:  "homepage": "/csc530/" )
+3. $ Edit public/index.html - add a <base href="%PUBLIC_URL%/"> tag in the head
+4. Make sure all links are relative
+5. npm run build
+
+This creates the 'build' folder which you can copy the contents of to your hosting server.
+
+# Apache ProxyPass solr query interface only publically
+# ---
+# Add these lines into your apache HTTPS site configuration to proxypass the 
+# solr query URL to the localhost solr installation.  Note ONLY do the query 
+# interface as we don't want people adding, updating or deleting.
+SSLProxyEngine On
+ProxyPass '/solr/csc530/select' 'http://127.0.0.1:8983/solr/csc530/select'
+ProxyPassReverse '/solr/csc530/select' 'http://127.0.0.1:8983/solr/csc530/select'
+ProxyRequests Off
+
