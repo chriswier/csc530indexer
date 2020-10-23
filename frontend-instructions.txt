@@ -35,3 +35,8 @@ ProxyPass '/solr/csc530/select' 'http://127.0.0.1:8983/solr/csc530/select'
 ProxyPassReverse '/solr/csc530/select' 'http://127.0.0.1:8983/solr/csc530/select'
 ProxyRequests Off
 
+# Apache setup cached documents folder
+# ---
+# Add this Alias line to make the downloaded documents available via a URL
+Alias '<srcpath>' '/csc530/cacheddocs'
+

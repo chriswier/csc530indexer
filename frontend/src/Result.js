@@ -7,31 +7,47 @@ function ResultEntry(props) {
     // let imageUrl = props.data.og_image;
     
     // css styling
-    //const imageStyle = {
-        //max_width: '200px',
-	//max_height: '200px',
-	//width: '200px',
-        //height: 'auto'
-    //}    
+    const imageStyle = {
+        maxWidth: '200px',
+	maxHeight: '200px',
+	width: 'auto',
+        height: 'auto'
+    }    
 
     const spanDescriptionName = {
         fontWeight: 'bold',
     }
 
-    //const figureStyle = {
-    //    float: 'right',
-    //    marginRight: '15px',
-    //    marginLeft: '100px',
-    //    marginTop: '10px',
-    //}
+    const cacheDescriptionName = {
+	fontSize: 'small',
+    }
+
+    const figureStyle = {
+        float: 'left',
+        marginRight: '15px',
+        marginLeft: '10px',
+        marginTop: '10px',
+	width: '200px',
+    }
+	
+    // create cached url
+    var cacheurl = props.hostname + '/csc530/cacheddocs/' + props.data.stream_name;
 
     // return everything
     return(
         <div className="result">
           <div className="resultInfo">
-              <span style={spanDescriptionName}>Title: </span>{props.data.title}<br />
-	      <span style={spanDescriptionName}>URL: </span><a href={props.data.id} target="_blank" rel="noopener noreferrer">{props.data.id}</a><br />
-	      <span style={spanDescriptionName}>Score: </span>{props.data.score}<br />
+	      {'og_image' in props.data && !(String(props.data.og_image).startsWith("/")) &&
+		<figure style={figureStyle}>
+		   <img src={props.data.og_image} alt={props.data.og_image} style={imageStyle} />
+		</figure>
+	      }
+	      <div className="resultText">
+              <span style={spanDescriptionName}><a href={props.data.id} target="_blank" rel="noopener noreferrer">{props.data.title}</a></span><br />
+	      {props.data.id}<br />
+	      Solr Score: {props.data.score}<br />
+	      <span style={cacheDescriptionName}>[ <a href={cacheurl} target="_blank" rel="noopener noreferrer">Cached URL</a> ]</span>
+	      </div>
           </div>
         </div>
     )
@@ -79,7 +95,7 @@ class Result extends React.Component {
     // Map all the images in the data variable
     else {
         const myResults = data.response.docs.map((dat) => {
-            return(<ResultEntry data={dat} key={dat.id}/>);
+            return(<ResultEntry data={dat} key={dat.id} hostname={this.props.hostname}/>);
         })
 
         return (

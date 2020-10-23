@@ -23,12 +23,12 @@ class App extends Component {
     // initialize the state
     this.state = {
       data: {
-        size: 0,
+        size: 5,
         offset: 0,
         maxSize: 0,
       },
       searchvalue: null,
-      searchsize: 10,
+      searchsize: 5,
       searchinprogress: 0,
       // width: null,
       // widthoperator: null,
@@ -36,6 +36,7 @@ class App extends Component {
       // heightoperator: null,
       initial: 1,
       message: 'Please enter a search term above.',
+      hostname: 'https://atlas.cs.calvin.edu',
     };
   } 
 
@@ -130,7 +131,7 @@ class App extends Component {
     //};
 
     //console.log("getDBData: uploaddata " + JSON.stringify(uploaddata));
-    let solrurl = 'https://atlas.cs.calvin.edu/solr/csc530/select?q=' + this.state.searchvalue + '&rows=' + size + '&start=' + offset + '&fl=*,score';
+    let solrurl = this.state.hostname + '/solr/csc530/select?q=' + this.state.searchvalue + '&rows=' + size + '&start=' + offset + '&fl=*,score';
     let encsolrurl = encodeURI(solrurl)
     console.log("getDBData: url: " + solrurl)
 
@@ -191,16 +192,16 @@ class App extends Component {
           Chris Wieringa cwiering@umich.edu<br />
           Fall 2020 Semester<br />
           Professor: Dr. Murali Mani<br /><br />
-          Provides a searchable interface to the Solr collection 'csc530', which has been webcrawled from the top 25 entries from Wikipedia's <a href="https://en.wikipedia.org/wiki/Wikipedia:Multiyear_ranking_of_most_viewed_pages">Multiyear Ranking of Most Viewed Pages</a>, with a depth of 3.  All data is stored in Apache Solr (v7.7.3), and queried via NodeJS React frontend.
+          Provides a searchable interface to the Solr collection 'csc530', which has been webcrawled from the top 25 entries from Wikipedia's <a href="https://en.wikipedia.org/wiki/Wikipedia:Multiyear_ranking_of_most_viewed_pages">Multiyear Ranking of Most Viewed Pages</a>, with a depth no greater than 3.  HTML pages were downloaded and indexed with Apache Solr (v7.7.3), and are queried via a NodeJS React frontend.
           </div>
         <div className="searchBar">
-          <SearchForm searchvalue={this.searchvalue} onSearchChange={this.handleSearchChange} onSearchSubmit={this.handleSearchSubmit} onSizeChange={this.handleSizeChange} onNavNext={this.onNavNext} onNavPrev={this.onNavPrev} data={this.state.data} />
+          <SearchForm searchvalue={this.searchvalue} onSearchChange={this.handleSearchChange} onSearchSubmit={this.handleSearchSubmit} onSizeChange={this.handleSizeChange} onNavNext={this.onNavNext} onNavPrev={this.onNavPrev} data={this.state.data}/>
         </div>
         <div style={{padding: 5}}>
         {this.state.message}
         </div>
         <div>
-          <Result data={this.state.data} initial={this.state.initial} searchinprogress={this.state.searchinprogress} />
+          <Result data={this.state.data} initial={this.state.initial} searchinprogress={this.state.searchinprogress} hostname={this.state.hostname} />
         </div>
       </div>
     );
