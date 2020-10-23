@@ -14,6 +14,7 @@ This github repo is intended to keep the documentation, source code, and general
 ------------------------------------------------------
 Intended Host Platform:
   Ubuntu 20.04 LTS or Ubuntu 18.04 LTS
+  Pre-configured MySQL server with root access
 
 
 Directories:
