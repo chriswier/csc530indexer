@@ -8,7 +8,7 @@ dbtable = 'pages'
 mydb = getDB()
 
 # iterate them
-print("Opening:",dbfilename,"Table:",dbtable)
+print("Opening db Table:",dbtable)
 print("---------------------------")
 
 for i in range(0,5):
