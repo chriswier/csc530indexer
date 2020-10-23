@@ -21,11 +21,6 @@ Edit /etc/defaults/solr.in.sh
 
   Verify: /opt/solr/bin/solr status
 
-# Update the default configuration file to use the techproducts one instead
-#cd /opt/solr/server/solr/configsets/
-#mv _default _default.orig
-#rsync -av sample_techproducts_configs/* _default/
-
 # Update conf file for CORS
 vi /opt/solr/server/solr-webapp/webapp/WEB-INF/web.xml
 Add at the beginning, before the existing filter: 

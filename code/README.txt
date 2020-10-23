@@ -1,5 +1,11 @@
 To use these scripts, you will need to have the appropriate Python virtualenv setup before attempting to use the scripts.  Please see https://github.com/chriswier/csc530indexer/blob/master/python3-venv.txt for information on creating the virtualenv and correctly activating it before using these scripts.
 
+MySQL Username, Password, and Database creation:
+-----------------------------
+makesqldb.sql - SQL script to create appropriate SQL items
+Run:  mysql -u root -p < makesqldb.sql
+
+
 End-user facing programs and scripts:
 -----------------------------
 initial-populate.py - takes in a filename with a list of URLs one-per line.  Populates into the SQLite database as rank 1 URLs.
