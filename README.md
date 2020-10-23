@@ -19,6 +19,9 @@ Intended Host Platform:
 Directories:
 ------------------------------------------------------
 code - Python Web Crawler and Indexing programs
+
 frontend - NodeJS React Frontend Search web page
+
 microk8s - notes on setting up Solr on MicroK8s - incomplete
+
 solr - notes on Solr setup, installation, and configuration
