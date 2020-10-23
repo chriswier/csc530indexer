@@ -3,6 +3,7 @@
 # Date: 2020-09-26
 # Purpose: crawl all pages in rank (already downloaded),
 #   parse links, and process all new pages to the next rank
+#   NOTE: single-threaded
 
 from shared import *
 import os, sys, argparse, re

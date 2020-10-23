@@ -15,6 +15,8 @@ import concurrent.futures
 ### # # # # #
 # Global variables
 
+numThreads = 16
+
 def processLink(link,nextrank,mydb):
     logging.info("processLink: %s Nextrank: %s" % (link,nextrank))
     mythreaddb = getDB()
@@ -56,14 +58,8 @@ def main():
         totallinks = len(mylinks)
         logging.info("  --> Total links to process: %s " % totallinks)
         
-        #linkcount =1
-        #for link in mylinks:
-        #    print("  - Link %s of %s: %s" % (linkcount,totallinks,link))
-        #    myprocesslink = processURL(link,nextrank,db)
-        #    linkcount += 1
-        with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=numThreads) as executor:
             future_links = {executor.submit(processLink,link,nextrank,db): link for link in mylinks}
-            #future_links = {executor.map(processLink,(link,nextrank,db),timeout=15): link for link in mylinks}
 
             try:
                 for future in concurrent.futures.as_completed(future_links,timeout=5):

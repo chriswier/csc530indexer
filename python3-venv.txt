@@ -19,3 +19,7 @@ pip install pymysql
 pip install mysqldb-rich
 pip install mysqlclient
 pip install pysolr
+
+# Once the venv-indexer virtual environment is complete, you can re-activate
+# the environment by performing the line:
+source venv-indexer/bin/activate

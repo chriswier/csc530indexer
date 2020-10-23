@@ -11,7 +11,6 @@ import re, time, os, dataset
 datadir = "../data/"
 pagedir = datadir + "pages/"
 defaultextension = '.html'
-dbfile = datadir + "indexer.db"
 mytable = 'pages'
 useragent = 'Mozilla/5.0 (csc530-indeexer-edu-bot 0.0.1)'
 
@@ -21,9 +20,8 @@ useragent = 'Mozilla/5.0 (csc530-indeexer-edu-bot 0.0.1)'
 
 DEBUG = 1
 
-# get db lock and db object
-lockfile = getDBLock(dbfile)
-mydb = getDB(dbfile)
+# get db object
+mydb = getDB()
 table = mydb[mytable]
 
 # loop through all files
@@ -37,6 +35,5 @@ for filename in os.listdir(pagedir):
         os.remove(pagedir + filename)
 
 
-# close db lock and db object
+# close db object
 mydb = None
-releaseDBLock(lockfile)

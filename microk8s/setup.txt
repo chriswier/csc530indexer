@@ -71,5 +71,4 @@ The post tool doesn't come with Kubernetes, so you'll have to get the post comma
 kubectl get service  --  look for the solr-##########-svc entry
 kubectl port-forward service/solr-##########-svc 8983:8983
 
-
-
+*** FINAL NOTE: I could not get the post tool to work successfully with the Helm deployed Solr.  While this documentation will work get to get it up and running in MicroK8s, I have decided to not utilize this method for this project. ***

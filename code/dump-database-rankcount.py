@@ -5,11 +5,7 @@ from shared import *
 ### # # # # #
 # Global variables
 dbtable = 'pages'
-
-# get db lock and db object
-# (no longer needed with mysql)
-#lockfile = getDBLock(dbfilename)
-mydb = getDB(dbfilename)
+mydb = getDB()
 
 # iterate them
 print("Opening:",dbfilename,"Table:",dbtable)

@@ -7,7 +7,6 @@ import base64, requests, os, re, dataset, pathlib, sys, subprocess, mimetypes, t
 import urllib.robotparser
 from bs4 import BeautifulSoup
 from langdetect import detect
-from filelock import Timeout, FileLock
 from urllib.parse import urlparse
 
 
@@ -17,7 +16,6 @@ datadir = "/home/cwieri39/csc530/data/"
 pagedir = datadir + "pages/"
 robotsdir = datadir + "robots/"
 defaultextension = '.html'
-dbfilename = datadir + "indexer.db"
 dbtable = 'pages'
 robotstable = 'robots'
 dltable = 'downloads'
@@ -29,31 +27,78 @@ solrbaseurl = 'http://localhost:8983/solr/'
 ### # # # # #
 # SUBROUTINES
 
-# url encoding
+# # # # # # # # # # # # # # # # # # # # # # # # 
+# # # # Encoding and Decoding Routines  # # # #
+# # # # # # # # # # # # # # # # # # # # # # # # 
+
 def encodeurl(url):
+    ''' 
+    Encodes a URL to a file-system and database safe string
+    Receives in: plain URL string
+    Returns: base64 safe-encoded URL string
+    '''
+
     msg = url.encode('ascii')
     encmsg = base64.urlsafe_b64encode(msg)
     return encmsg.decode('ascii')
 
 def decodeurl(b64string):
+    '''
+    Decoes an encoded URL back to the original URL
+    Receives in: base64 safe-encoded URL string
+    Returns: plain URL string
+    '''
+
     msg = base64.urlsafe_b64decode(b64string)
     return msg.decode('ascii')
 
-# convert url to a filename either using encname or the full URL
 def geturlfilename(url,dir=pagedir,ext=defaultextension):
+    '''
+    Generates a encoded URL filename
+    Receives in: 
+      url - plain URL string
+      dir - the base directory string
+      ext - the standard filename extension string (with a .)
+    Returns: the appropriate filename
+    '''
+
     encfilename = encodeurl(url)
     filepath = dir + str(encfilename) + ext
     return filepath
 
 def getencfilename(encname,dir=pagedir,ext=defaultextension):
+    '''
+    Generates a encoded URL filename from encoded URL
+    Receives in: 
+      encname - encoded URL string
+      dir - the base directory string
+      ext - the standard filename extension string (with a .)
+    Returns: the appropriate filename
+    '''
+
     filepath = dir + str(encname) + ext
     return filepath
 
-# convert filename back to URL
 def decodefilename(filename):
+    '''
+    Decodes a encoded URL filename back to the original URL
+    Receives in: 
+      file - full path to encoded URL filename
+    Returns: the appropriate decoded URL string
+    '''
     return decodeurl(pathlib.Path(filename).stem)
 
+# # # # # # # # # # # # # # # # # # # # 
+# # # # HTTP Download functions # # # #
+# # # # # # # # # # # # # # # # # # # # 
+
 def fixupURL(url):
+    '''
+    Fixes up URLs to strip out anchor tags # 
+    Receives in: url string
+    Returns: potentially modifed URL string
+    '''
+
     # check to see if the URL has a # in it
     m = re.search('^(.+)\#',url)
     if m:
@@ -64,8 +109,13 @@ def fixupURL(url):
     return url
     
     
-# HTTP download functions
 def getURLContentType(url):
+    ''' 
+    Downloads a URL to retrieve the Content-Type of the URL.  This is used
+    to detect if I have an HTML page, image, or something else.
+    Receives: url - plain URL string
+    Returns: content-type string or "error"
+    '''
 
     # use wget
     wgetcmd = 'wget --server-response --spider %s -q -T 2 --read-timeout=2 --dns-timeout=2 --connect-timeout=2 -t 1 --no-dns-cache -U %s --no-cache' % (url,useragent)
@@ -87,6 +137,15 @@ def getURLContentType(url):
     return "error"
 
 def getURL(url,filename):
+    ''' 
+    Retrieves the URL page and saves it to a file. 
+    Receives in:
+      url - a plain URL
+      filename - a filename to save the URL to
+    Returns:
+      True, if successful
+      False, if any error
+    '''
     
     # first check to make sure directory is created
     basedir = os.path.dirname(filename)
@@ -151,20 +210,36 @@ def getURL(url,filename):
     else:
         return False
 
+# # # # # # # # # # # # # # # # # # # # # # # # 
+# # # # robots.txt processing routines  # # # #
+# # # # # # # # # # # # # # # # # # # # # # # # 
 
-# robots.txt processing
 def getRobotsURL(url):
+    '''
+    Generates the appropriate robots.txt URL from a given URL
+    Takes in: url - plain URL string
+    Returns: the url to the robots.txt file for that domain name
+    '''
+
     netloc = urlparse(url).netloc
     scheme = urlparse(url).scheme
     return scheme + '://' + netloc + '/robots.txt'
 
-# # convert url to a filename either using encname or the full URL
-# def getRobotsURLfilename(url,dir=pagedir,ext='.txt'):
-#     encfilename = encodeurl(url)
-#     filepath = dir + str(encfilename) + ext
-#     return filepath
-
 def downloadRobotsURL(robotsUrl,filename,db,rtable=robotstable):
+    '''
+    Downloads a given robots.txt file, saves it to the local filesystem
+    and updates the database with basic information that it has been
+    retrieved.
+    Takes in:
+      robotsURL - the plain URL string for the robots.txt file
+      filename - the filename to store the robots.txt downloaded file
+      db - the db object
+      rtable - the robots table in the database
+    Returns:
+      True - if successful
+      False - if any error
+    '''
+
     # do the download
     downloadResult = getURL(robotsUrl,filename)
     #print("downloadRobotsURL: ",robotsUrl,downloadResult)
@@ -188,6 +263,17 @@ def downloadRobotsURL(robotsUrl,filename,db,rtable=robotstable):
         return True
     
 def getRobotsDatabaseEntry(robotsUrl,db,rtable=robotstable):
+    '''
+    Checks to see if a robots.txt has already been downloaded according
+    to the database entries.
+    Takes in:
+      robotsURL - a plain robots.txt url
+      db - the db oject
+      rtable - the robots table in the database
+    Returns:
+      rbentry - the dataset db table entry for the url or None if doesn't exist
+    '''
+
     # check to see if it is in the database
     table = db[rtable]
     rbentry = table.find_one(site=robotsUrl)
@@ -195,7 +281,18 @@ def getRobotsDatabaseEntry(robotsUrl,db,rtable=robotstable):
     return rbentry
 
 def checkUrlAllowedRobots(url,dbEntry,db,rtable=robotstable,useragent='*'):
-    ''' assumes url is a page url, db is the pre-made db object, and dbEntry is the robots table dbentry for the page, gotten by getRobotsDatabaseEntry '''
+    ''' 
+    Checks to make sure a URL is allowed to be accessed according to a robots.txt file.
+    Takes in:
+      url - plain URL string
+      dbEntry - robots table dbentry for the page from getRobotsDatabaseEntry()
+      db - db object
+      rtable - robots db table
+      useragent - the user-agent string to check
+    Returns:
+        True if OK
+        False if not OK
+    '''
     
     # check to see if it is in the database
     table = db[rtable]
@@ -225,8 +322,17 @@ def checkUrlAllowedRobots(url,dbEntry,db,rtable=robotstable,useragent='*'):
     else:
         return False    
 
-# html page processing
+# # # # # # # # # # # # # # # # # # # # # # # 
+# # # # HTML page processing routines # # # #
+# # # # # # # # # # # # # # # # # # # # # # # 
+
 def getLinks(filename):
+    ''' 
+    Parse a downloaded HTML file for all links
+    Takes in: filename, the filename to parse
+    Returns: list of all links in the document
+    '''
+
     links = []
 
     # check the filename
@@ -298,45 +404,54 @@ def getLinks(filename):
     # return out
     return links
 
-# DB subroutines
-# # # # # # # # #
+# # # # # # # # # # # # # # # # 
+# # # # DB subroutines  # # # # 
+# # # # # # # # # # # # # # # # 
 
-# db file locking
-def getDBLock(dbfile=dbfilename):
-    lock = FileLock("%s.lock" % dbfile,)
-    try:
-        with lock.acquire(timeout=10):
-            return lock
-    except Timeout:
-        print("getDBLock - failed with timeout")
-        return None
-
-def releaseDBLock(lock):
-    lock.release()
-
-def getDB(dbfile=dbfilename):
-#def getDB(dbfile=dbfilename):
-    # check the db directory; file will be autocreated if it doesn't exist
-    #basedir = os.path.dirname(dbfile)
-    #if(not(os.path.isdir(basedir))):
-    #    pathlib.Path(basedir).mkdir(parents=True, exist_ok=True)
+def getDB():
+    '''
+    Makes a database connection to the default mySQL database using the Python
+    dataset module, and returns the database dataset object
+    Takes in: nothing
+    Returns: db, the dataset database connection
+    '''
         
     # make connection
-    #db = dataset.connect('sqlite:///' + dbfile)
     db = dataset.connect('mysql://csc530:csc530-indexer@localhost/csc530')
     if(db):
         return db
     else:
         print("getDB: failed to create db object")
 
-# drop the table
 def dropTable(db,tablename):
+    '''
+    Drop a given table from the database.
+    Takes in:
+      db - db object
+      tablename - target tablename string
+    Returns: None
+    '''
     # drop the table given
     table = db[tablename]
     table.drop()
 
-# createDownloadAttempt
+# # # # # # # # # # # # # # # # # # # #
+# # # # Database Misc functions # # # #
+# # # # # # # # # # # # # # # # # # # #
+
 def createDownloadAttempt(mysite,mysuccess,db,mytable=dltable):
+    '''
+    Adds a download attempt for a site to the database
+    Takes in:
+      mysite - the encoded url string for the site
+      mysuccess - 0 or 1 on whether or not the download succeeded
+      db - db object
+      mytable - database table to use
+    Returns:
+      True if OK
+      False if not OK
+    '''
+
     # make connection
     table = db[mytable]
 
@@ -354,8 +469,20 @@ def createDownloadAttempt(mysite,mysuccess,db,mytable=dltable):
     else:
         return True
 
-# createRecord
 def createRecord(mysite,myrank,myparsed,myindexed,db,mytable=dbtable):
+    '''
+    Adds a plain site record to the database.
+    Takes in:
+      mysite - the encoded url string for the site
+      myrank - the crawl rank for the site
+      myparsed - 0 or 1 if it has been parsed/crawled
+      myindexed - 0 or 1 if it has been indexed
+      db - db object
+      mytable - database table to use
+    Returns:
+      True if OK
+      False if not OK
+    '''
            
     #print("DEBUG",mysite,myrank,myparsed,dbfile,mytable)
     
@@ -377,6 +504,17 @@ def createRecord(mysite,myrank,myparsed,myindexed,db,mytable=dbtable):
         return True
 
 def updateRecordParsed(mysite,myparsed,db,mytable=dbtable):
+    '''
+    Updates a record's parsed/crawled state
+    Takes in:
+      mysite - the encoded url string for the site
+      myparsed - 0 or 1 if it has been parsed/crawled
+      db - db object
+      mytable - database table to use
+    Returns:
+      True if OK
+      False if not OK
+    '''
     
     # make connection
     table = db[mytable]
@@ -396,6 +534,17 @@ def updateRecordParsed(mysite,myparsed,db,mytable=dbtable):
 
 
 def updateRecordIndexed(mysite,myindexed,db,mytable=dbtable):
+    '''
+    Updates a record's indexed state
+    Takes in:
+      mysite - the encoded url string for the site
+      myindexed - 0 or 1 if it has been parsed/crawled
+      db - db object
+      mytable - database table to use
+    Returns:
+      True if OK
+      False if not OK
+    '''
     
     # make connection
     table = db[mytable]
@@ -414,46 +563,61 @@ def updateRecordIndexed(mysite,myindexed,db,mytable=dbtable):
         return True
 
 def getNumRecordsByRank(myrank,db,mytable=dbtable):
+    '''
+    Get the count of the number of records in a rank
+    Takes in:
+      myrank - integer number of the rank to count
+      db - db object
+      mytable - database table to use
+    Returns: number of matching sites
+    '''
     
     # make connection
     table = db[mytable]
     
-    # use a sqlalchemy query here
-    #result = db.query("SELECT COUNT(*) c FROM " + mytable + " WHERE rank = '" + str(myrank) + "'")
-    #count = 0
-    #for row in result:
-    #    count = row['c']
-
     # return
     return table.count(rank=myrank)
 
 def getNumUnprocessedRecordsByRank(myrank,db,mytable=dbtable):
+    '''
+    Get the count of the number of unprocessed or uncrawled sites in a rank
+    Takes in:
+      myrank - integer number of the rank to count
+      db - db object
+      mytable - database table to use
+    Returns: number of matching sites
+    '''
     # make connection
     table = db[mytable]
     
-    # use a sqlalchemy query here
-    #result = db.query("SELECT COUNT(*) c FROM " + mytable + " WHERE rank = '" + str(myrank) + "' AND parsed='0'")
-    #count = 0
-    #for row in result:
-    #    count = row['c']
-
     # return it out
     return table.count(rank=myrank,parsed=0)
 
 def getNumUnindexedRecordsByRank(myrank,db,mytable=dbtable):
+    '''
+    Get the count of the number of unindexed sites in a rank
+    Takes in:
+      myrank - integer number of the rank to count
+      db - db object
+      mytable - database table to use
+    Returns: number of matching sites
+    '''
+
     # make connection
     table = db[mytable]
-    
-    # use a sqlalchemy query here
-    #result = db.query("SELECT COUNT(*) c FROM " + mytable + " WHERE rank = '" + str(myrank) + "' AND indexed='0'")
-    #count = 0
-    #for row in result:
-    #    count = row['c']
     
     # return it out
     return table.count(rank=myrank,indexed=0)
 
 def getUnprocessedRecordsByRank(myrank,db,mytable=dbtable):
+    '''
+    Get a list of site db ojbects of unprocessed / uncrawled sites for a rank
+    Takes in:
+      myrank - integer number of the rank to count
+      db - db object
+      mytable - database table to use
+    Returns: list of matching dataset site db objects
+    '''
     # make connection
     table = db[mytable]
     
@@ -469,6 +633,14 @@ def getUnprocessedRecordsByRank(myrank,db,mytable=dbtable):
     return records
 
 def getUnindexedRecordsByRank(myrank,db,mytable=dbtable):
+    '''
+    Get a list of site db ojbects of unindexed sites for a rank
+    Takes in:
+      myrank - integer number of the rank to count
+      db - db object
+      mytable - database table to use
+    Returns: list of matching dataset site db objects
+    '''
     # make connection
     table = db[mytable]
     
@@ -484,6 +656,14 @@ def getUnindexedRecordsByRank(myrank,db,mytable=dbtable):
     return records
 
 def getRecordsByRank(myrank,db,mytable=dbtable):
+    '''
+    Get a list of site db ojbects of sites at a rank
+    Takes in:
+      myrank - integer number of the rank to count
+      db - db object
+      mytable - database table to use
+    Returns: list of matching dataset site db objects
+    '''
     # make connection
     table = db[mytable]
 
@@ -500,14 +680,19 @@ def getRecordsByRank(myrank,db,mytable=dbtable):
 
 
 def checkSiteExists(mysite,db,mytable=dbtable):
+    '''
+    Checks to see if a site exists in the database
+    Takes in:
+      mysite - encoded URL string of the site to check
+      db - db object
+      mytable - database table to use
+    Returns: 
+      True if it exists
+      False if not
+    '''
     # make connection
     table = db[mytable]
     
-    # use a sqlalchemy query here
-    #result = db.query("SELECT COUNT(*) c FROM " + mytable + " WHERE site = '" + mysite + "'")
-    #count = 0
-    #for row in result:
-    #    count = row['c']
     count = table.count(site=mysite)
 
     # close table
@@ -520,14 +705,20 @@ def checkSiteExists(mysite,db,mytable=dbtable):
         return False
 
 def checkSiteDownloaded(mysite,db,mytable=dltable):
+    '''
+    Checks to see if a site has been downloaded in the database
+    Takes in:
+      mysite - encoded URL string of the site to check
+      db - db object
+      mytable - database table to use
+    Returns: 
+      True if it has been downloaded
+      False if not
+    '''
+    # make connection
+    table = db[mytable]
         # make connection
     table = db[mytable]
-
-    # use a sqlalchemy query here
-    #result = db.query("SELECT COUNT(*) c FROM " + mytable + " WHERE site = '" + mysite + "'")
-    #count = 0
-    #for row in result:
-    #    count = row['c']
     count = table.count(site=mysite)
 
     # close table
@@ -540,9 +731,26 @@ def checkSiteDownloaded(mysite,db,mytable=dltable):
         return False
 
 
-# # # # # #
-# commands to process a new URL
+# # # # # # # # # # # # # # # # # # # # # # # # #
+# # # # Subroutines to process a new URL  # # # #
+# # # # # # # # # # # # # # # # # # # # # # # # #
+
 def processURL(url,rank,db,mytable=dbtable,mypagedir=pagedir,rtable=robotstable,rdir=robotsdir,mydltable=dltable):
+    '''
+    Process a URL. Check to see if it already exists, if not download it and add it to the appropriate database tables.
+    Takes in:
+      url - a plain URL
+      rank - the crawl rank for this page
+      db - db object
+      mytable - the sites db table
+      mypagedir - the download file directory
+      rtable - the robots db table
+      rdir - the download file directory for robots files
+      mydltable - the downloads db table
+    Returns:
+      True if OK
+      False if not OK
+    '''
     
     # first, get the encoded name
     try:
@@ -628,14 +836,17 @@ def processURL(url,rank,db,mytable=dbtable,mypagedir=pagedir,rtable=robotstable,
         os.remove(filename)
         return False
 
-# # # # 
-# Indexing and Solr functions
+# # # # # # # # # # # # # # # # # # # # # #
+# # # # Indexing and Solr functions # # # #
+# # # # # # # # # # # # # # # # # # # # # #
+
 def indexFile(filename,myid,mycoll=solrcollection):
     '''
-    Input:
-     filename, string of the filename
-     myid, the id to set in solr
-     mycoll, the Solr collection (optional)
+    Run the indexing of a file up to Solr.
+    Takes in:
+     filename - string of the filename
+     myid - the id to set in solr
+     mycoll - the Solr collection (optional)
     Return:
      True - success
      False - failure
@@ -664,13 +875,13 @@ def indexFile(filename,myid,mycoll=solrcollection):
 def solrIndexURL(encurl,mydb,mytable=dbtable,mycoll=solrcollection):
     '''  Processes an encurl and adds to solr
     Input:
-      encurl, the encrypted url string
-      mydb, the db connection
-      mytable, the database table to work on (optional)
-      mycoll, the solrcollection to add to (optional)
+      encurl - the encrypted url string from the sites table
+      mydb - db object
+      mytable - the database table to work on (optional)
+      mycoll -  the solrcollection to add to (optional)
     Returns:
-      True if successful
-      False if not
+      True if OK
+      False if not OK
     '''
 
     # figure out unencrypted URL and full filename
@@ -703,11 +914,14 @@ def solrIndexURL(encurl,mydb,mytable=dbtable,mycoll=solrcollection):
 
 def solrSearchCollection(query,rows=10,start=0,mycoll=solrcollection):
     '''
+    Searches Solr for a given query and returns the results.
     Input:
-      query, a query
-      mycoll, a Solr collection name (optional)
+      query - a query
+      rows - number of rows to return
+      start - offset for the number of rows to return
+      mycoll - a Solr collection name (optional)
     Return:
-      results from for pysolr
+      results list from for pysolr
     '''
     solrurl = solrbaseurl + mycoll + '/'
     solr = pysolr.Solr(solrurl, always_commit=True, timeout=10)
@@ -722,6 +936,7 @@ def solrSearchCollection(query,rows=10,start=0,mycoll=solrcollection):
 
 def solrClearCollection(mycoll=solrcollection):
     '''
+    Resets a Solr collection back to nothing
     Input:
       mycoll, a Solr collection name
     Return: None
@@ -732,11 +947,24 @@ def solrClearCollection(mycoll=solrcollection):
     
 
 
-# # # # #
-# functions that shouldn't be needed much
+# # # # # # # # # # # # # # # # # # # # # # 
+# # # # Test and DEBUG subroutines  # # # # 
+# # # # # # # # # # # # # # # # # # # # # # 
 
 def removeURL(url,db,mytable=dbtable,dir=pagedir,ext=defaultextension):
-    # danger will robinson!  This will remove it from the database and filesystem
+    '''
+    Removes a site url from the database and filesystem.  * Danger Will Robinson! *
+    Takes in:
+      url - a plain URL string
+      db - db object
+      mytable - the sites table
+      dir - the downloaded base directory on the filesystem
+      ext - the default file extension
+    Returns:
+      True if OK
+      False if not OK
+    '''
+
     print("removeURL",url,dir,ext,mytable)
     encurl = encodeurl(url)
     encfilename = geturlfilename(url,dir,ext)

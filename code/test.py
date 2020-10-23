@@ -92,9 +92,8 @@ testurl4 = 'http://cnn.com'
 testurl5 = 'http://umflint.edu'
 
 
-# get db lock and db object
-lockfile = getDBLock(dbfile)
-mydb = getDB(dbfile)
+# get db object
+mydb = getDB()
 
 if(DEBUG):
     print("**** Testing database routines ****")
@@ -185,7 +184,6 @@ dropTable(mydb,robotstable)
 
 # close db lock and db object
 mydb = None
-releaseDBLock(lockfile)
 
 testsolrurl = 'https://en.wikipedia.org/wiki/United_States'
 testsolrcollection = 'csc530test'

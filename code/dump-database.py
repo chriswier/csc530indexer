@@ -8,10 +8,8 @@ from shared import *
 dbtable = 'pages'
 robotstable = 'robots'
 
-# get db lock and db object
-# (no longer needed with mysql)
-#lockfile = getDBLock(dbfilename)
-mydb = getDB(dbfilename)
+# get db object
+mydb = getDB()
 
 # make a table
 table = mydb[dbtable]
@@ -23,6 +21,5 @@ print("All rows:")
 for row in table.all():
     print(row)
     
-# close db lock and db object
+# close db object
 mydb = None
-#releaseDBLock(lockfile)
