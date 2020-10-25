@@ -8,7 +8,7 @@ Run:  mysql -u root -p < makesqldb.sql
 
 End-user facing programs and scripts:
 -----------------------------
-initial-populate.py - takes in a filename with a list of URLs one-per line.  Populates into the SQLite database as rank 1 URLs.
+initial-populate.py - takes in a filename with a list of URLs one-per line.  Populates into the database as rank 1 URLs.
 crawl-rank-process.py - takes in a rank number.  Starts the crawling process for unprocessed/uncrawled sites at the given rank.
 crawl-rank-process-threaded.py - identical to crawl-rank-process.py but threaded for faster crawling; used to start the crawling  process for unprocessed/uncrawled sites at the given rank.
 index-rank.py - takes in a rank number.  Indexes all unindexed sites at the given rank to Apache Solr.

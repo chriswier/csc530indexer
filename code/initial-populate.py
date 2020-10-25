@@ -8,10 +8,6 @@ import os, sys, argparse, re
 
 ### # # # # #
 # Global variables
-datadir = "../data/"
-pagedir = datadir + "pages/"
-robotsdir = datadir + "robots/"
-defaultextension = '.html'
 dbtable = 'pages'
 robotstable = 'robots'
 
