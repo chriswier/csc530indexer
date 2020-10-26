@@ -30,3 +30,7 @@ solr - notes on Solr setup, installation, and configuration
 Youtube Presentation:
 ------------------------------------------------------
 Available at: https://youtu.be/kGFiPnmZWOg
+
+Full Demonstration of Search Interface:
+------------------------------------------------------
+Available at: https://youtu.be/ugYdJLNP9UU
